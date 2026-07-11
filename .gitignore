@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+.next/
+dist/
+*.log
+.DS_Store
+__pycache__/
+.venv/
+ai/models/
+ai/train/dataset.csv

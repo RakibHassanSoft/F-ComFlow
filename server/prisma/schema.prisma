@@ -1,0 +1,291 @@
+// F-ComFlow database schema.
+// RULE (from the implementation guide): every business table carries tenantId,
+// and every query in the API is scoped by it. That is what keeps
+// Merchant A's data invisible to Merchant B.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Phase 1: Multi-tenant core ----------
+
+model Tenant {
+  id            String   @id @default(cuid())
+  businessName  String
+  riskThreshold Int      @default(60) // orders scoring above this are "high risk" (Phase 7)
+
+  // New-feature settings (all optional; safe defaults keep old behaviour)
+  awayMessage        String? // auto-reply sent once when a customer messages outside business hours
+  businessHourStart  Int?    // local hour 0-23 that support opens (null = always open)
+  businessHourEnd    Int?    // local hour 0-23 that support closes
+  autoStatusMessages Boolean @default(true) // auto-notify customer on order status changes
+
+  // Meta Marketing API connection (Ads page): set when the merchant connects
+  // their ad account with the ads_read/ads_management scopes.
+  adsAccountId   String?
+  adsAccountName String?
+  adsToken       String?
+
+  createdAt     DateTime @default(now())
+
+  users         User[]
+  customers     Customer[]
+  conversations Conversation[]
+  messages      Message[]
+  products      Product[]
+  orders        Order[]
+  invoices      Invoice[]
+  ledgerEntries LedgerEntry[]
+  channels      ChannelConnection[]
+  templates     Template[]
+}
+
+enum Role {
+  OWNER
+  AGENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(OWNER)
+  createdAt    DateTime @default(now())
+}
+
+// ---------- Phase 2: Messaging & unified inbox ----------
+
+enum Channel {
+  MESSENGER
+  INSTAGRAM
+  WHATSAPP
+  TELEGRAM
+  VIBER
+  WEBCHAT // live-chat widget on the merchant's own website
+  EMAIL
+}
+
+model Customer {
+  id            String         @id @default(cuid())
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  name          String
+  phone         String?
+  // The customer's platform ID (Messenger PSID / Instagram IGSID / WhatsApp
+  // number). Needed to send replies back out through the real APIs.
+  externalId    String?
+  createdAt     DateTime       @default(now())
+  conversations Conversation[]
+  orders        Order[]
+
+  @@index([tenantId, externalId])
+}
+
+// A merchant's connected social channel (real Meta/WhatsApp integration).
+// One row per connected Facebook Page / Instagram account / WhatsApp number.
+model ChannelConnection {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  type        Channel // MESSENGER | INSTAGRAM | WHATSAPP
+  // What Meta sends in webhooks so we can route to the right tenant:
+  // MESSENGER -> Page ID, INSTAGRAM -> IG account ID, WHATSAPP -> phone_number_id
+  externalId  String   @unique
+  // MESSENGER/INSTAGRAM -> Page access token, WHATSAPP -> system-user token
+  accessToken String
+  label       String? // friendly name shown in Settings, e.g. "Dhaka Trends BD Page"
+  createdAt   DateTime @default(now())
+
+  @@unique([tenantId, type, externalId])
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  customerId    String
+  customer      Customer  @relation(fields: [customerId], references: [id])
+  channel       Channel
+  assignedTo    String? // user id of the agent handling it (prevents double-handling)
+  unreadCount   Int       @default(0)
+  lastMessageAt DateTime  @default(now())
+
+  // Ad attribution: click-to-Messenger/WhatsApp ads include a referral tag
+  // in the webhook — we keep it, so every ORDER traces back to the AD.
+  adId          String?
+  adTitle       String?
+
+  lastAutoReplyAt DateTime? // throttles the out-of-hours auto-reply
+
+  messages      Message[]
+  orders        Order[]
+}
+
+enum Direction {
+  INBOUND  // customer -> merchant
+  OUTBOUND // merchant -> customer
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id])
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  direction      Direction
+  text           String
+  // Platform's own message id (Messenger/IG "mid", WhatsApp message id).
+  // Meta retries webhooks, so we store this and ignore duplicates. Null for
+  // simulated and outbound messages (Postgres treats NULLs as distinct).
+  externalId     String?
+  createdAt      DateTime     @default(now())
+
+  @@unique([tenantId, externalId])
+}
+
+// Quick-reply templates (canned messages) a merchant inserts in the inbox.
+model Template {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// ---------- Phase 4: Inventory & orders ----------
+
+model Product {
+  id               String  @id @default(cuid())
+  tenantId         String
+  tenant           Tenant  @relation(fields: [tenantId], references: [id])
+  sku              String
+  name             String
+  price            Decimal @db.Decimal(10, 2)
+  stockQuantity    Int     @default(0)
+  reorderThreshold Int     @default(5)
+  lowStockAlerted  Boolean @default(false) // dedupe: one alert per threshold crossing
+  orders           Order[]
+
+  @@unique([tenantId, sku])
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  DISPATCHED
+  DELIVERED
+  RETURNED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL // advance/booking fee collected (Phase 6+7)
+  PAID
+}
+
+model Order {
+  id             String        @id @default(cuid())
+  tenantId       String
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  orderNumber    Int // human-friendly number, unique per tenant
+  status         OrderStatus   @default(DRAFT)
+  paymentStatus  PaymentStatus @default(UNPAID)
+
+  // Customer details (extracted by the AI parser in Phase 3)
+  customerName   String
+  phone          String
+  address        String
+  district       String
+
+  productId      String
+  product        Product       @relation(fields: [productId], references: [id])
+  quantity       Int           @default(1)
+  unitPrice      Decimal       @db.Decimal(10, 2)
+  totalAmount    Decimal       @db.Decimal(10, 2)
+
+  customerId     String?
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+
+  // Phase 5: courier
+  courierName    String?
+  trackingCode   String?
+  courierStatus  String?
+
+  // Phase 7: risk
+  riskScore      Int?
+  riskLevel      String? // LOW | MEDIUM | HIGH
+
+  createdAt      DateTime      @default(now())
+  events         OrderEvent[]
+  invoices       Invoice[]
+  ledgerEntries  LedgerEntry[]
+
+  @@unique([tenantId, orderNumber])
+}
+
+// Timeline of everything that happened to an order
+model OrderEvent {
+  id        String   @id @default(cuid())
+  tenantId  String
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  type      String // e.g. CREATED, CONFIRMED, DISPATCHED, PAYMENT, RISK_SCORED
+  note      String
+  createdAt DateTime @default(now())
+}
+
+// ---------- Phase 6: Payments & ledger ----------
+
+enum InvoiceType {
+  FULL
+  ADVANCE // partial booking fee for high-risk COD orders
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id])
+  type          InvoiceType   @default(FULL)
+  status        InvoiceStatus @default(PENDING)
+  amount        Decimal       @db.Decimal(10, 2)
+  transactionId String?       @unique // set on payment; unique = idempotency guard
+  createdAt     DateTime      @default(now())
+  paidAt        DateTime?
+  ledgerEntry   LedgerEntry?
+}
+
+model LedgerEntry {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  invoiceId String   @unique // one ledger entry per invoice — exactly once
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  gross     Decimal  @db.Decimal(10, 2)
+  fee       Decimal  @db.Decimal(10, 2) // 1% MDR
+  vat       Decimal  @db.Decimal(10, 2)
+  net       Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+}

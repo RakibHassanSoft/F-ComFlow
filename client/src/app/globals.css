@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* A calm, premium base */
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Slim scrollbars everywhere */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Print: only show the shipping label area */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

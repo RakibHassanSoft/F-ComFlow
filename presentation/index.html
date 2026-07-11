@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F-ComFlow — Presentation Demo</title>
+<!--
+  F-ComFlow STATIC PRESENTATION DEMO
+  ==================================
+  Single file, zero dependencies, works fully OFFLINE.
+  Same design as the real dashboard, but every screen runs on scripted
+  data — no database, no API, no internet needed. Perfect for showing
+  "what the user will do" on a projector.
+
+  Just double-click this file to open it in any browser.
+-->
+<style>
+  /* ---------- Design tokens (mirrors the real Tailwind theme) ---------- */
+  :root{
+    --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --text:#0f172a;
+    --muted:#64748b; --faint:#94a3b8; --indigo:#4f46e5; --indigo-d:#4338ca;
+    --sidebar:#020617; --green:#059669; --red:#dc2626; --amber:#d97706;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter','Segoe UI',system-ui,sans-serif}
+  body{background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+
+  /* ---------- Shared pieces ---------- */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:10px;padding:9px 16px;
+       font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s}
+  .btn-primary{background:var(--indigo);color:#fff}.btn-primary:hover{background:var(--indigo-d)}
+  .btn-secondary{background:#fff;color:#334155;border:1px solid #cbd5e1}.btn-secondary:hover{background:#f1f5f9}
+  .btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#047857}
+  .btn-danger{background:#fff;color:var(--red);border:1px solid #fecaca}.btn-danger:hover{background:#fef2f2}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .badge{display:inline-flex;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700}
+  .b-DRAFT{background:#f1f5f9;color:#475569}.b-CONFIRMED{background:#eff6ff;color:#1d4ed8}
+  .b-DISPATCHED{background:#fffbeb;color:#b45309}.b-DELIVERED{background:#ecfdf5;color:#047857}
+  .b-CANCELLED{background:#fef2f2;color:var(--red)}.b-UNPAID{background:#f1f5f9;color:#475569}
+  .b-PARTIAL{background:#fffbeb;color:#b45309}.b-PAID{background:#ecfdf5;color:#047857}
+  .b-LOW{background:#ecfdf5;color:#047857}.b-MEDIUM{background:#fffbeb;color:#b45309}.b-HIGH{background:#fef2f2;color:#b91c1c}
+  .b-MESSENGER{background:#eff6ff;color:#1d4ed8}.b-WHATSAPP{background:#ecfdf5;color:#047857}.b-INSTAGRAM{background:#fdf2f8;color:#be185d}
+  h1{font-size:24px;font-weight:800;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:3px}
+  .page-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);padding:12px 20px;border-bottom:1px solid #f1f5f9}
+  td{padding:12px 20px;border-bottom:1px solid #f8fafc}
+  tr:hover td{background:#f8fafc}
+  .link{color:var(--indigo);font-weight:600;cursor:pointer;text-decoration:none}.link:hover{text-decoration:underline}
+
+  /* ---------- Login ---------- */
+  #login{display:flex;min-height:100vh}
+  .login-brand{flex:1;background:linear-gradient(135deg,#4f46e5 0%,#4338ca 45%,#0f172a 100%);
+    color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:space-between}
+  .login-brand h2{font-size:38px;font-weight:800;line-height:1.2;letter-spacing:-.02em}
+  .login-brand p{color:#c7d2fe;margin-top:16px;max-width:420px;line-height:1.6}
+  .login-form{flex:1;display:flex;align-items:center;justify-content:center;padding:32px}
+  .login-form .inner{width:100%;max-width:360px}
+  .field label{display:block;font-weight:600;font-size:13px;margin-bottom:6px;color:#334155}
+  .field input{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font-size:14px;outline:none}
+  .field input:focus{border-color:#818cf8;box-shadow:0 0 0 3px #e0e7ff}
+  .field{margin-bottom:14px}
+
+  /* ---------- App shell ---------- */
+  #app{display:none}
+  .shell{display:flex;min-height:100vh}
+  .sidebar{position:fixed;inset:0 auto 0 0;width:240px;background:var(--sidebar);color:#cbd5e1;display:flex;flex-direction:column;z-index:20}
+  .logo{display:flex;align-items:center;gap:10px;padding:22px 20px;color:#fff;font-weight:800;font-size:15px}
+  .logo .zap{width:32px;height:32px;background:var(--indigo);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .nav{flex:1;padding:8px 12px}
+  .nav a{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;color:#cbd5e1;
+    text-decoration:none;font-weight:600;font-size:13.5px;margin-bottom:2px;cursor:pointer}
+  .nav a:hover{background:rgba(30,41,59,.6);color:#fff}
+  .nav a.active{background:var(--indigo);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.4)}
+  .nav .ico{width:18px;text-align:center}
+  .side-foot{border-top:1px solid #1e293b;padding:16px 20px;font-size:13px}
+  .side-foot b{color:#fff}
+  .side-foot .role{color:#64748b;font-size:12px}
+  .main{margin-left:240px;flex:1;padding:32px;max-width:1200px}
+
+  /* ---------- Overview ---------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+  .stat{padding:20px;cursor:pointer;transition:.15s}
+  .stat:hover{box-shadow:0 4px 16px rgba(15,23,42,.08)}
+  .stat .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
+  .stat .v{font-size:24px;font-weight:800}
+  .stat .l{color:var(--muted);font-size:13px;margin-top:2px}
+  .pipeline{display:flex;gap:26px;flex-wrap:wrap;padding:22px}
+  .pipeline .n{font-size:20px;font-weight:800;margin-right:8px}
+
+  /* ---------- Inbox ---------- */
+  .inbox{display:flex;gap:16px;height:calc(100vh - 170px)}
+  .convo-list{width:300px;flex-shrink:0;overflow-y:auto}
+  .convo{padding:13px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer}
+  .convo:hover{background:#f8fafc}.convo.sel{background:#eef2ff}
+  .convo .top{display:flex;justify-content:space-between;font-weight:600}
+  .convo .time{color:var(--faint);font-size:12px;font-weight:400}
+  .convo .prev{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:4px 0 6px}
+  .unread{background:var(--indigo);color:#fff;font-size:11px;font-weight:700;border-radius:99px;padding:1px 7px;margin-left:6px}
+  .thread{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .thread-head{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #f1f5f9}
+  .msgs{flex:1;overflow-y:auto;padding:20px;background:#fbfcfe;display:flex;flex-direction:column;gap:10px}
+  .bubble{max-width:70%;padding:10px 16px;border-radius:18px;font-size:13.5px;line-height:1.5;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+  .in{align-self:flex-start;background:#fff;border:1px solid var(--border);border-bottom-left-radius:6px}
+  .out{align-self:flex-end;background:var(--indigo);color:#fff;border-bottom-right-radius:6px}
+  .replybox{display:flex;gap:10px;padding:14px 16px;border-top:1px solid #f1f5f9}
+  .replybox input{flex:1;border:1px solid #cbd5e1;border-radius:12px;padding:10px 16px;font-size:13.5px;outline:none}
+  .replybox input:focus{border-color:#818cf8}
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:var(--muted);text-align:center;padding:40px}
+  .empty .big{font-size:34px;margin-bottom:10px}
+
+  /* ---------- Modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .overlay.open{display:flex}
+  .modal{background:#fff;border-radius:18px;padding:24px;width:100%;max-width:430px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(15,23,42,.3)}
+  .modal h3{font-size:17px;font-weight:700;margin-bottom:14px}
+  .warn-chip{background:#fef3c7;color:#b45309;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;margin-left:6px;vertical-align:middle}
+  .field input.warn{background:#fffbeb;border-color:#fcd34d}
+  .rate{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+
+  /* ---------- Order detail ---------- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  dl div{margin-bottom:10px}dt{color:var(--faint);font-size:12.5px}dd{font-weight:600;margin-top:1px}
+  .timeline{list-style:none;border-left:2px solid #e2e8f0;margin-left:6px;padding-left:20px}
+  .timeline li{position:relative;margin-bottom:16px}
+  .timeline li::before{content:'';position:absolute;left:-26px;top:5px;width:10px;height:10px;border-radius:99px;background:var(--indigo);box-shadow:0 0 0 4px #eef2ff}
+  .timeline .note{font-weight:600;font-size:13.5px}.timeline .when{color:var(--faint);font-size:12px}
+  .risk-banner{border:1px solid #fecaca;background:#fff5f5;border-radius:16px;padding:16px 20px;
+    display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+
+  /* ---------- Shipping ---------- */
+  .journey{display:flex;gap:5px;margin-top:16px}
+  .journey .step{flex:1}
+  .journey .bar{height:6px;border-radius:99px;background:#e2e8f0}
+  .journey .bar.on{background:var(--indigo)}
+  .journey .lbl{font-size:10px;color:var(--faint);margin-top:5px}
+  .journey .lbl.on{color:var(--indigo);font-weight:700}
+
+  /* ---------- Payments ---------- */
+  .balance{background:linear-gradient(135deg,#4f46e5,#3730a3);color:#fff;padding:26px;border:none}
+  .balance .amt{font-size:36px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
+  .balance .cap{color:#c7d2fe;font-size:13px}
+
+  /* ---------- Toast + demo bar ---------- */
+  #toast{position:fixed;bottom:80px;right:24px;background:#fff;border:1px solid #fcd34d;border-radius:14px;
+    padding:13px 18px;font-weight:600;font-size:13.5px;box-shadow:0 10px 30px rgba(15,23,42,.15);display:none;z-index:60}
+  #demobar{position:fixed;bottom:0;left:240px;right:0;background:#0f172a;color:#cbd5e1;padding:9px 20px;
+    font-size:12.5px;display:flex;gap:8px;align-items:center;z-index:30;flex-wrap:wrap}
+  #demobar b{color:#fff}
+  #demobar .step-chip{background:#1e293b;border-radius:99px;padding:2px 10px;white-space:nowrap}
+  #demobar .step-chip.done{background:#166534;color:#dcfce7}
+  .ribbon{position:fixed;top:12px;right:-34px;transform:rotate(35deg);background:var(--amber);color:#fff;
+    font-size:10.5px;font-weight:800;padding:4px 40px;z-index:70;letter-spacing:.06em}
+  .hint{border:1px dashed #cbd5e1;color:var(--muted);font-size:13px;padding:14px 18px;border-radius:14px;margin-top:18px;background:#fff}
+
+  /* ---------- Nav badge (low stock) ---------- */
+  .nav a{position:relative}
+  .navbadge{margin-left:auto;background:#f59e0b;color:#fff;font-size:11px;font-weight:800;border-radius:99px;
+    padding:1px 8px;min-width:20px;text-align:center}
+
+  /* ---------- Orders toolbar ---------- */
+  .searchbox{position:relative}
+  .searchbox input{border:1px solid #cbd5e1;border-radius:99px;padding:8px 14px 8px 34px;font-size:12.5px;width:250px;outline:none;background:#fff}
+  .searchbox input:focus{border-color:#818cf8;box-shadow:0 0 0 3px #e0e7ff}
+  .searchbox .mag{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:13px}
+  .bulkbar{display:flex;align-items:center;gap:10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:14px;
+    padding:10px 16px;margin-bottom:12px;flex-wrap:wrap}
+  .bulkbar b{color:#3730a3}
+  input[type=checkbox]{accent-color:var(--indigo);width:15px;height:15px;cursor:pointer}
+
+  /* ---------- Timeline note events ---------- */
+  .timeline li.note-ev::before{background:#f59e0b;box-shadow:0 0 0 4px #fef3c7}
+  .note-tag{background:#fef3c7;color:#b45309;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;margin-right:6px;vertical-align:middle}
+  .noteform{display:flex;gap:10px;border-top:1px solid #f1f5f9;padding-top:14px;margin-top:16px}
+  .noteform input{flex:1;border:1px solid #cbd5e1;border-radius:12px;padding:9px 14px;font-size:13px;outline:none}
+  .noteform input:focus{border-color:#818cf8}
+
+  /* ---------- Analytics ---------- */
+  .daybars{display:flex;align-items:flex-end;gap:3px;height:150px}
+  .daybars .db{flex:1;background:var(--indigo);border-radius:4px 4px 0 0;position:relative;min-height:3px;cursor:pointer}
+  .daybars .db:hover{background:var(--indigo-d)}
+  .daybars .db .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:6px;
+    background:#0f172a;color:#fff;font-size:11px;border-radius:8px;padding:5px 10px;white-space:nowrap;z-index:5}
+  .daybars .db:hover .tip{display:block}
+  .hbar{height:8px;border-radius:99px;background:#f1f5f9;margin-top:5px}
+  .hbar>div{height:8px;border-radius:99px;background:var(--indigo)}
+  .hbar.g>div{background:var(--green)}
+
+  /* ---------- Settings extras ---------- */
+  .team-row{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:12px;padding:11px 14px;margin-bottom:8px}
+  .role-chip{background:#f1f5f9;color:#64748b;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px;margin-left:6px}
+  .tpl-var{background:#f1f5f9;border-radius:6px;padding:1px 7px;font-family:monospace;font-size:11.5px}
+
+  /* ---------- Responsive: mobile top bar + off-canvas sidebar ---------- */
+  #topbar{display:none;position:fixed;top:0;left:0;right:0;height:54px;background:var(--sidebar);color:#fff;
+    z-index:40;align-items:center;gap:12px;padding:0 14px}
+  #topbar .burger{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:6px}
+  #topbar .tlogo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14.5px}
+  #topbar .tlogo .zap{width:26px;height:26px;background:var(--indigo);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+  #navScrim{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:25}
+
+  @media(max-width:920px){
+    #topbar{display:flex}
+    .sidebar{transform:translateX(-100%);transition:transform .22s ease;width:250px}
+    .sidebar.open{transform:translateX(0);box-shadow:0 0 60px rgba(15,23,42,.5)}
+    #navScrim.show{display:block}
+    .main{margin-left:0;padding:72px 14px 90px;max-width:none}
+    #demobar{left:0;font-size:11px;padding:7px 10px}
+    .ribbon{top:64px}
+    .inbox{flex-direction:column;height:auto}
+    .convo-list{width:100%;max-height:230px}
+    .thread{min-height:430px}
+    .msgs{min-height:220px}
+    .page-head h1{font-size:20px}
+    .searchbox input{width:100%;min-width:160px}
+    .searchbox{flex:1;min-width:180px}
+    .bubble{max-width:85%}
+    .thread-head{flex-wrap:wrap;gap:8px}
+    .stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+    th,td{padding:10px 12px}
+    .pipeline{gap:16px;padding:16px}
+    .daybars{height:110px}
+    .modal{max-width:100%}
+  }
+  @media(max-width:820px){
+    #login{flex-direction:column}
+    .login-brand{padding:28px;min-height:38vh;justify-content:flex-start;gap:18px}
+    .login-brand h2{font-size:26px}
+    .login-brand p{font-size:13px;margin-top:10px}
+    .login-form{padding:24px 18px;align-items:flex-start}
+  }
+  @media(max-width:520px){
+    .grid2{grid-template-columns:1fr}
+    .rate{flex-wrap:wrap;gap:8px}
+    .replybox,.noteform{flex-wrap:wrap}
+    .replybox .btn,.noteform .btn{width:100%;justify-content:center}
+    .btn{padding:9px 13px;font-size:13px}
+    .balance .amt{font-size:28px}
+    #demobar{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="ribbon">STATIC DEMO</div>
+
+<!-- ==================== LOGIN ==================== -->
+<div id="login">
+  <div class="login-brand">
+    <div style="display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px"><span style="color:#fcd34d">⚡</span> F-ComFlow</div>
+    <div>
+      <h2>Run your entire<br>social commerce business<br>from one dashboard.</h2>
+      <p>Unified inbox · AI order parsing · live inventory · courier booking · Bangla QR payments · COD risk scores.</p>
+    </div>
+    <div style="color:#818cf8;font-size:13px">Built for SMUCT CSE FEST 2026</div>
+  </div>
+  <div class="login-form">
+    <div class="inner">
+      <h1 style="margin-bottom:4px">Welcome back</h1>
+      <p class="sub" style="margin-bottom:26px">Log in to your merchant workspace</p>
+      <div class="field"><label>Email</label><input value="demo@fcomflow.com" readonly></div>
+      <div class="field"><label>Password</label><input type="password" value="demo1234" readonly></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="loginDemo()">Log in</button>
+      <p style="text-align:center;color:var(--faint);font-size:12px;margin-top:16px">Presentation mode — click Log in to start the tour</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== APP ==================== -->
+<div id="app">
+<div id="topbar">
+  <button class="burger" onclick="toggleNav()">☰</button>
+  <div class="tlogo"><span class="zap">⚡</span> F-ComFlow</div>
+</div>
+<div id="navScrim" onclick="toggleNav(false)"></div>
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo"><span class="zap">⚡</span> F-ComFlow</div>
+    <nav class="nav" id="nav">
+      <a data-page="overview" class="active"><span class="ico">▦</span> Overview</a>
+      <a data-page="inbox"><span class="ico">💬</span> Inbox</a>
+      <a data-page="orders"><span class="ico">🛍</span> Orders</a>
+      <a data-page="customers"><span class="ico">👥</span> Customers</a>
+      <a data-page="inventory"><span class="ico">📦</span> Inventory <span class="navbadge" id="lowbadge" style="display:none"></span></a>
+      <a data-page="shipping"><span class="ico">🚚</span> Shipping</a>
+      <a data-page="payments"><span class="ico">💳</span> Payments</a>
+      <a data-page="analytics"><span class="ico">📊</span> Analytics</a>
+      <a data-page="ads"><span class="ico">📣</span> Ads</a>
+      <a data-page="settings"><span class="ico">⚙</span> Settings</a>
+    </nav>
+    <div class="side-foot">
+      <b>Dhaka Trends BD</b><br><span class="role">Demo Merchant · OWNER</span>
+    </div>
+  </aside>
+  <main class="main" id="main"></main>
+</div></div>
+
+<div id="toast"></div>
+<div id="demobar">
+  <b>5-min demo path:</b>
+  <span class="step-chip" id="chip0">1 Simulate message</span>
+  <span class="step-chip" id="chip1">2 Extract order (AI)</span>
+  <span class="step-chip" id="chip2">3 Confirm + risk score</span>
+  <span class="step-chip" id="chip3">4 Book courier</span>
+  <span class="step-chip" id="chip4">5 QR payment → ledger</span>
+</div>
+
+<!-- generic modal -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+/* =====================================================================
+   STATIC DEMO STATE — everything lives in this object. No backend.
+   ===================================================================== */
+const S = {
+  page: 'overview',
+  selConvo: null,
+  demoStep: -1,
+  products: [
+    { sku:'TSH-001', name:'Premium T-Shirt', price:550,  stock:40, reorder:10 },
+    { sku:'PNJ-002', name:'Cotton Panjabi',  price:1450, stock:18, reorder:5 },
+    { sku:'SRE-003', name:'Jamdani Saree',   price:3200, stock:7,  reorder:3 },
+    { sku:'WAL-004', name:'Leather Wallet',  price:850,  stock:25, reorder:8 },
+    { sku:'WCH-005', name:'Classic Watch',   price:2100, stock:2,  reorder:5 },
+    { sku:'BAG-006', name:'Canvas Backpack', price:1250, stock:15, reorder:5 },
+  ],
+  convos: [
+    { id:1, name:'Karima Akter', channel:'MESSENGER', unread:2, time:'2m', msgs:[
+      {d:'in',  t:'Assalamu alaikum, Cotton Panjabi ta ki stock e ache?'},
+      {d:'out', t:'Wa alaikum assalam! Ji ache. Price 1450 taka, free delivery Dhaka te 😊'},
+      {d:'in',  t:'Ok 2 ta nibo. Amar number 01712345678'},
+      {d:'in',  t:'Address: House 12, Road 5, Dhanmondi, Dhaka'} ] },
+    { id:2, name:'Tanvir Ahmed', channel:'WHATSAPP', unread:1, time:'1h', msgs:[
+      {d:'in',  t:'Hi! Jamdani Saree er details din please'},
+      {d:'out', t:'Hello! Original Jamdani, 3200 taka. Ship all over Bangladesh 🇧🇩'},
+      {d:'in',  t:'1 ta lagbe. My phone 01898765432. Deliver to Village: Char Kaua, Thana: Sadar, Barishal'} ] },
+  ],
+  orders: [
+    { no:1001, name:'Sajid Hasan', phone:'01911223344', addr:'Flat 3B, GEC Circle, Nasirabad', dist:'Chattogram',
+      product:'Premium T-Shirt', qty:2, total:1100, status:'DELIVERED', pay:'PAID', risk:22, level:'LOW',
+      courier:'Pathao', track:'PTH-1001-DEMO01', cstat:'Delivered',
+      events:[['Draft order created','2 Jul, 10:12'],['Order confirmed — 2 unit(s) reserved from stock','2 Jul, 10:15'],
+              ['COD risk: 22% (LOW)','2 Jul, 10:15'],['Booked with Pathao — tracking PTH-1001-DEMO01','2 Jul, 11:02'],
+              ['Payment received: ৳1100.00 — fee ৳11.00 + VAT ৳1.65, net ৳1087.35','2 Jul, 14:30'],
+              ['Package delivered to customer','3 Jul, 16:45']] },
+    { no:1002, name:'Nusrat Jahan', phone:'01655667788', addr:'House 45, Zindabazar Point', dist:'Sylhet',
+      product:'Leather Wallet', qty:1, total:850, status:'CONFIRMED', pay:'UNPAID', risk:41, level:'MEDIUM',
+      events:[['Draft order created','3 Jul, 09:20'],['Order confirmed — 1 unit(s) reserved from stock','3 Jul, 09:24'],
+              ['COD risk: 41% (MEDIUM) — New customer — no delivery history','3 Jul, 09:24']] },
+    { no:1003, name:'Mitu Rani', phone:'01344556677', addr:'College para', dist:'Rangpur',
+      product:'Classic Watch', qty:1, total:2100, status:'CONFIRMED', pay:'UNPAID', risk:72, level:'HIGH',
+      events:[['Draft order created','3 Jul, 13:02'],['Order confirmed — 1 unit(s) reserved from stock','3 Jul, 13:05'],
+              ['COD risk: 72% (HIGH) — Address looks incomplete; New customer; Rangpur has a higher COD return rate','3 Jul, 13:05']] },
+  ],
+  ledger: [
+    { order:1001, gross:1100, fee:11, vat:1.65, net:1087.35, when:'2 Jul, 14:30' },
+  ],
+  customers: [
+    { name:'Sajid Hasan',  phone:'01911223344', channels:['MESSENGER'],  orders:3, rr:0,  spent:4350, last:'2d ago' },
+    { name:'Karima Akter', phone:'01712345678', channels:['MESSENGER'],  orders:1, rr:0,  spent:2900, last:'2m ago' },
+    { name:'Tanvir Ahmed', phone:'01898765432', channels:['WHATSAPP'],   orders:2, rr:50, spent:3200, last:'1h ago' },
+    { name:'Nusrat Jahan', phone:'01655667788', channels:['WHATSAPP'],   orders:1, rr:0,  spent:850,  last:'1d ago' },
+    { name:'Mitu Rani',    phone:'01344556677', channels:['INSTAGRAM'],  orders:1, rr:0,  spent:0,    last:'1d ago' },
+  ],
+  analytics: [ // last 14 days — revenue, orders
+    ['26 Jun',1100,1],['27 Jun',0,0],['28 Jun',2900,2],['29 Jun',850,1],['30 Jun',4300,3],
+    ['1 Jul',1450,1],['2 Jul',3200,2],['3 Jul',2950,2],['4 Jul',0,0],['5 Jul',5650,4],
+    ['6 Jul',1250,1],['7 Jul',2100,1],['8 Jul',3750,3],['9 Jul',1100,1],
+  ],
+  ads: [
+    { id:'ad-23851002', title:'Premium Panjabi | Free Dhaka Delivery', status:'ACTIVE', spend:4200, revenue:15800, orders:9 },
+    { id:'ad-23851001', title:'Eid Collection — 20% OFF',              status:'ACTIVE', spend:2600, revenue:8400,  orders:5 },
+    { id:'ad-23851003', title:'New Arrivals — Order on Messenger',     status:'PAUSED', spend:900,  revenue:1250,  orders:1 },
+  ],
+  templates: [
+    { title:'Delivery charge', body:'Hi {customer}! Delivery is ৳60 inside Dhaka, ৳120 outside. — {shop}' },
+    { title:'Payment options', body:'{customer}, we accept bKash, Nagad and cash on delivery 😊' },
+  ],
+  team: [
+    { name:'Demo Merchant', email:'demo@fcomflow.com', role:'OWNER' },
+    { name:'Rina Akter',    email:'rina@fcomflow.com', role:'AGENT' },
+  ],
+  orderSearch: '',
+  selectedOrders: new Set(),
+};
+const money = n => '৳' + n.toLocaleString('en-BD',{minimumFractionDigits:2,maximumFractionDigits:2});
+const $ = id => document.getElementById(id);
+
+/* ---------- tiny helpers ---------- */
+function toast(msg){ const t=$('toast'); t.innerHTML=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',5000); }
+function demoStep(i){ if(i>S.demoStep){S.demoStep=i;} for(let k=0;k<=4;k++){ $('chip'+k).classList.toggle('done', k<=S.demoStep);} }
+function openModal(html){ $('modal').innerHTML=html; $('overlay').classList.add('open'); }
+function closeModal(){ $('overlay').classList.remove('open'); }
+function badge(x){ return `<span class="badge b-${x}">${x}</span>`; }
+
+function loginDemo(){ $('login').style.display='none'; $('app').style.display='block'; go('overview'); }
+function toggleNav(force){
+  const open = force!==undefined ? force : !$('sidebar').classList.contains('open');
+  $('sidebar').classList.toggle('open', open);
+  $('navScrim').classList.toggle('show', open);
+}
+
+/* ---------- router ---------- */
+function go(page, arg){
+  S.page = page;
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active', a.dataset.page===page));
+  const render = { overview:rOverview, inbox:rInbox, orders:rOrders, order:()=>rOrder(arg),
+                   customers:rCustomers, inventory:rInventory, shipping:rShipping, payments:rPayments,
+                   analytics:rAnalytics, ads:rAds, settings:rSettings }[page];
+  $('main').innerHTML = render();
+  updateLowBadge();
+  if(page==='inbox' && S.selConvo!=null){ const m=$('msgs'); if(m) m.scrollTop=m.scrollHeight; }
+}
+function updateLowBadge(){
+  const low = S.products.filter(p=>p.stock<=p.reorder).length;
+  const b = $('lowbadge'); if(!b) return;
+  b.style.display = low>0 ? 'inline-block' : 'none'; b.textContent = low;
+}
+document.querySelectorAll('#nav a').forEach(a=>a.onclick=()=>{ go(a.dataset.page); toggleNav(false); });
+
+/* =====================================================================
+   OVERVIEW
+   ===================================================================== */
+function rOverview(){
+  const counts = {}; S.orders.forEach(o=>counts[o.status]=(counts[o.status]||0)+1);
+  const low = S.products.filter(p=>p.stock<=p.reorder).length;
+  const bal = S.ledger.reduce((s,e)=>s+e.net,0);
+  const unread = S.convos.reduce((s,c)=>s+c.unread,0);
+  const stat=(ic,bg,v,l,pg)=>`<div class="card stat" onclick="go('${pg}')">
+    <div class="ic" style="background:${bg}">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  return `
+  <div class="page-head"><div><h1>Welcome back, Demo</h1>
+    <p class="sub">Here's what's happening at Dhaka Trends BD today.</p></div>
+    <button class="btn btn-secondary" onclick="toast('📧 In the real app this emails you the last-24h briefing (orders, revenue, low stock)')">📧 Email me this briefing</button></div>
+  <div class="stats">
+    ${stat('💬','#eff6ff', S.convos.length, `Conversations · ${unread} unread`, 'inbox')}
+    ${stat('🛍','#eef2ff', S.orders.length, `Orders · ${counts.CONFIRMED||0} awaiting dispatch`, 'orders')}
+    ${stat('📦','#fffbeb', S.products.length, `Products · ${low} low on stock`, 'inventory')}
+    ${stat('💳','#ecfdf5', money(bal), 'Ledger balance · net of fees', 'payments')}
+  </div>
+  <div class="card" style="margin-top:18px"><div class="pipeline">
+    ${['DRAFT','CONFIRMED','DISPATCHED','DELIVERED','RETURNED','CANCELLED'].map(s=>
+      `<span><span class="n">${counts[s]||0}</span>${badge(s)}</span>`).join('')}
+  </div></div>
+  <div class="hint"><b style="color:#334155">Demo tip:</b> open the <span class="link" onclick="go('inbox')">Inbox</span>
+    and press <b>“Simulate incoming message”</b> — then follow the steps in the bar below.</div>`;
+}
+
+/* =====================================================================
+   INBOX  (Phase 2 + 3)
+   ===================================================================== */
+function rInbox(){
+  const list = S.convos.map((c,i)=>`
+    <div class="convo ${S.selConvo===i?'sel':''}" onclick="selectConvo(${i})">
+      <div class="top"><span>${c.name}</span><span class="time">${c.time}</span></div>
+      <div class="prev">${c.msgs[c.msgs.length-1].t}</div>
+      ${badge(c.channel)}${c.unread?`<span class="unread">${c.unread}</span>`:''}
+    </div>`).join('');
+  const c = S.selConvo!=null ? S.convos[S.selConvo] : null;
+  const thread = !c ? `<div class="empty"><div class="big">💬</div><b>Select a conversation</b>
+      <p style="margin-top:6px">Pick a chat on the left, or simulate a new incoming message.</p></div>`
+    : `
+    <div class="thread-head">
+      <div><b>${c.name}</b><div style="margin-top:4px">${badge(c.channel)}</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" onclick="toast('✅ Conversation assigned to you — teammates now see it as claimed')">✓ Claim</button>
+        <button class="btn btn-primary" id="extractBtn" onclick="extractOrder()">✨ Extract Order</button>
+      </div>
+    </div>
+    <div class="msgs" id="msgs">${c.msgs.map(m=>`<div class="bubble ${m.d}">${m.t}</div>`).join('')}</div>
+    <div style="display:flex;gap:8px;padding:12px 16px 0;border-top:1px solid #f1f5f9">
+      <button class="btn btn-secondary" style="padding:6px 12px;font-size:12.5px" onclick="quickReplies()">⚡ Quick reply</button>
+      <button class="btn btn-secondary" style="padding:6px 12px;font-size:12.5px" onclick="sendProductPicker()">📦 Send product</button>
+    </div>
+    <div class="replybox" style="border-top:none;padding-top:10px">
+      <input id="replyInput" placeholder="Type a reply…" onkeydown="if(event.key==='Enter')sendReply()">
+      <button class="btn btn-primary" onclick="sendReply()">Send ➤</button>
+    </div>`;
+  return `
+  <div class="page-head"><div><h1>Unified Inbox</h1>
+      <p class="sub">Messenger, Instagram and WhatsApp — one place.</p></div>
+    <button class="btn btn-secondary" onclick="simulate()">📡 Simulate incoming message</button></div>
+  <div class="inbox"><div class="card convo-list">${list}</div><div class="card thread">${thread}</div></div>`;
+}
+function selectConvo(i){ S.convos[i].unread=0; S.selConvo=i; go('inbox'); }
+function sendReply(){
+  const v = $('replyInput').value.trim(); if(!v) return;
+  S.convos[S.selConvo].msgs.push({d:'out',t:v}); go('inbox');
+}
+function fillTemplate(body){
+  const c = S.convos[S.selConvo];
+  return body.replace(/\{customer\}/gi, c.name.split(' ')[0])
+             .replace(/\{shop\}/gi, 'Dhaka Trends BD')
+             .replace(/\{agent\}/gi, 'Demo');
+}
+function quickReplies(){
+  openModal(`<h3>Quick replies</h3>
+    ${S.templates.map((t,i)=>`<div class="rate" style="cursor:pointer" onclick="closeModal();$('replyInput').value=fillTemplate(S.templates[${i}].body);$('replyInput').focus()">
+      <div><b>${t.title}</b><div class="sub" style="font-size:12.5px">${t.body}</div></div></div>`).join('')}
+    <p class="sub" style="font-size:12px">Variables <span class="tpl-var">{customer}</span> <span class="tpl-var">{shop}</span> <span class="tpl-var">{agent}</span> are filled in automatically.</p>`);
+}
+function sendProductPicker(){
+  openModal(`<h3>Send a product</h3>
+    ${S.products.map((p,i)=>`<div class="rate" style="cursor:pointer" onclick="closeModal();sendProduct(${i})">
+      <div><b>${p.name}</b></div><b>${money(p.price)}</b></div>`).join('')}`);
+}
+function sendProduct(i){
+  const p = S.products[i];
+  S.convos[S.selConvo].msgs.push({d:'out', t:`✨ ${p.name} — ${money(p.price)}. Order korte chaile just reply korun! 😊`});
+  go('inbox');
+}
+function simulate(){
+  // In the real product this is a Meta/WhatsApp webhook -> queue -> worker
+  S.convos.unshift({ id:99, name:'Rahim Uddin', channel:'INSTAGRAM', unread:3, time:'now', msgs:[
+    {d:'in', t:'Assalamu alaikum, Canvas Backpack ta ki stock e ache?'},
+    {d:'in', t:'2 ta nibo. Amar number 01755443322'},
+    {d:'in', t:'Address: Shib bari more, Sonadanga, Khulna'} ]});
+  S.selConvo = null; demoStep(0); go('inbox');
+  toast('📩 New message from <b>Rahim Uddin</b> (Instagram) — appeared live, no refresh');
+}
+function extractOrder(){
+  const btn=$('extractBtn'); btn.disabled=true; btn.innerHTML='✨ AI is reading the chat…';
+  setTimeout(()=>{ demoStep(1); openModal(`
+    <h3>✨ AI-extracted draft order</h3>
+    <p class="sub" style="margin-bottom:14px">Gemini parsed the Banglish chat. Highlighted fields = lower confidence.</p>
+    <div class="field"><label>Customer name</label><input value="Rahim Uddin"></div>
+    <div class="field"><label>Phone (01XXXXXXXXX)</label><input value="01755443322"></div>
+    <div class="field"><label>Address <span class="warn-chip">CHECK THIS</span></label><input class="warn" value="Shib bari more, Sonadanga"></div>
+    <div class="field"><label>District</label><input value="Khulna"></div>
+    <div class="field" style="background:#f8fafc;border-radius:10px;padding:10px 12px"><b>Product:</b> Canvas Backpack (matched from catalog)</div>
+    <div class="field"><label>Quantity</label><input value="2"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="createDraft()">Create draft order</button>`);
+    if($('extractBtn')){btn.disabled=false;btn.innerHTML='✨ Extract Order';}
+  }, 1200); // honest loading state, like the real ~1.2s Gemini latency
+}
+function createDraft(){
+  closeModal();
+  S.orders.unshift({ no:1004, name:'Rahim Uddin', phone:'01755443322', addr:'Shib bari more, Sonadanga', dist:'Khulna',
+    product:'Canvas Backpack', qty:2, total:2500, status:'DRAFT', pay:'UNPAID', risk:null, level:null,
+    events:[['Draft order created from conversation (AI parsed)','just now']] });
+  go('order', 1004);
+}
+
+/* =====================================================================
+   ORDERS  (Phase 4 + 5 + 6 + 7)
+   ===================================================================== */
+function rOrders(){
+  const q = S.orderSearch.toLowerCase();
+  const shown = S.orders.filter(o=> !q || o.name.toLowerCase().includes(q) || o.phone.includes(q)
+    || String(o.no).includes(q) || (o.track||'').toLowerCase().includes(q));
+  const sel = S.selectedOrders;
+  const allChecked = shown.length>0 && shown.every(o=>sel.has(o.no));
+  return `
+  <div class="page-head"><div><h1>Orders</h1><p class="sub">Every order, from draft to delivered.</p></div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="searchbox"><span class="mag">🔍</span>
+        <input placeholder="Search name, phone, tracking, #…" value="${S.orderSearch}"
+          oninput="S.orderSearch=this.value;go('orders');const i=document.querySelector('.searchbox input');i.focus();i.setSelectionRange(i.value.length,i.value.length)"></div>
+      <button class="btn btn-secondary" onclick="toast('⬇ In the real app this downloads orders.csv')">⬇ Export CSV</button>
+    </div></div>
+  ${sel.size?`<div class="bulkbar"><b>${sel.size} selected</b>
+    <button class="btn btn-secondary" onclick="bulkAct('confirm')">✓ Confirm selected</button>
+    <button class="btn btn-danger" onclick="bulkAct('cancel')">✕ Cancel selected</button>
+    <span class="link" style="margin-left:auto;font-size:12px" onclick="S.selectedOrders.clear();go('orders')">Clear selection</span></div>`:''}
+  <div class="card" style="overflow-x:auto"><table>
+    <tr><th style="width:36px"><input type="checkbox" ${allChecked?'checked':''}
+      onclick="${allChecked?'S.selectedOrders.clear()':`[${shown.map(o=>o.no).join(',')}].forEach(n=>S.selectedOrders.add(n))`};go('orders')"></th>
+    <th>Order</th><th>Customer</th><th>Product</th><th>Total</th><th>Status</th><th>Payment</th><th>Risk</th></tr>
+    ${shown.map(o=>`<tr>
+      <td><input type="checkbox" ${sel.has(o.no)?'checked':''}
+        onclick="S.selectedOrders.has(${o.no})?S.selectedOrders.delete(${o.no}):S.selectedOrders.add(${o.no});go('orders')"></td>
+      <td><span class="link" onclick="go('order',${o.no})">#${o.no}</span></td>
+      <td><b>${o.name}</b><div style="color:var(--faint);font-size:12px">${o.dist}</div></td>
+      <td>${o.product} × ${o.qty}</td><td><b>${money(o.total)}</b></td>
+      <td>${badge(o.status)}</td><td>${badge(o.pay)}</td>
+      <td>${o.risk!=null?badge(o.level)+` <span style="color:var(--muted);font-size:12px">${o.risk}%</span>`:'—'}</td>
+    </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:36px">No orders match your search.</td></tr>`}
+  </table></div>`;
+}
+function bulkAct(kind){
+  let ok=0, skip=0;
+  S.selectedOrders.forEach(no=>{
+    const o=findOrder(no);
+    if(kind==='confirm' && o.status==='DRAFT'){ o.status='CONFIRMED'; o.risk=o.risk??35; o.level=o.level??'MEDIUM';
+      o.events.push(['Order confirmed — '+o.qty+' unit(s) reserved from stock','just now']); ok++; }
+    else if(kind==='cancel' && ['DRAFT','CONFIRMED'].includes(o.status)){ o.status='CANCELLED';
+      o.events.push(['Order cancelled','just now']); ok++; }
+    else skip++;
+  });
+  S.selectedOrders.clear(); go('orders');
+  toast(`${kind==='confirm'?'✓ Confirmed':'✕ Cancelled'} <b>${ok}</b> order${ok!==1?'s':''}${skip?` · ${skip} skipped (state machine says no)`:''}`);
+}
+const findOrder = no => S.orders.find(o=>o.no===no);
+
+function rOrder(no){
+  const o = findOrder(no);
+  const highRisk = o.risk!=null && o.risk>=60 && o.status==='CONFIRMED';
+  const actions = [];
+  if(o.status==='DRAFT') actions.push(`<button class="btn btn-primary" onclick="confirmOrder(${o.no})">Confirm order (reserve stock)</button>`);
+  if(o.status==='CONFIRMED') actions.push(`<button class="btn btn-primary" onclick="bookCourier(${o.no})">🚚 Book courier</button>`);
+  if(o.status==='DISPATCHED') actions.push(`<button class="btn btn-secondary" onclick="syncStatus(${o.no})">↻ Sync courier status</button>`,
+    `<button class="btn btn-secondary" onclick="toast('🖨 In the real app this opens the printable label (save as PDF)')">🖨 Print label</button>`);
+  if(o.pay!=='PAID' && o.status!=='CANCELLED') actions.push(`<button class="btn btn-success" onclick="qrInvoice(${o.no},'FULL')">▣ Create QR invoice</button>`);
+  if(o.pay!=='UNPAID') actions.push(`<button class="btn btn-secondary" onclick="toast('🧾 In the real app this opens the printable payment receipt (save as PDF)')">🧾 Print receipt</button>`);
+  return `
+  <span class="link" onclick="go('orders')">← All orders</span>
+  <div class="page-head" style="margin-top:12px"><div><h1>Order #${o.no}</h1>
+    <p class="sub">${o.product} × ${o.qty} · ${o.dist}</p></div>
+    <div style="display:flex;gap:8px">${badge(o.status)} ${badge(o.pay)}</div></div>
+  ${highRisk?`<div class="risk-banner">
+      <div style="display:flex;gap:12px;align-items:center"><span style="font-size:22px">🛡️</span>
+        <div><b style="color:#991b1b">High COD risk: ${o.risk}%</b>
+        <div style="color:#dc2626;font-size:13px">Collect a 20% advance before dispatching to protect against a failed delivery.</div></div></div>
+      <button class="btn btn-danger" onclick="qrInvoice(${o.no},'ADVANCE')">Request advance payment</button></div>`:''}
+  <div class="grid2">
+    <div class="card" style="padding:20px"><b>Delivery details</b><dl style="margin-top:14px">
+      <div><dt>Customer</dt><dd>${o.name}</dd></div><div><dt>Phone</dt><dd>${o.phone}</dd></div>
+      <div><dt>Address</dt><dd>${o.addr}, ${o.dist}</dd></div>
+      <div><dt>Total</dt><dd style="font-size:16px">${money(o.total)}</dd></div>
+      ${o.risk!=null?`<div><dt>COD risk</dt><dd>${badge(o.level)} ${o.risk}%</dd></div>`:''}
+      ${o.track?`<div><dt>Shipment</dt><dd>${o.courier} · ${o.track}<div style="color:var(--muted);font-weight:400">Latest: ${o.cstat}</div></dd></div>`:''}
+    </dl></div>
+    <div class="card" style="padding:20px"><b>Actions</b>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">${actions.join('')||'<span class="sub">No actions — order complete.</span>'}</div></div>
+  </div>
+  <div class="card" style="padding:20px;margin-top:16px"><b>Timeline</b>
+    <ul class="timeline" style="margin-top:16px">${o.events.map(e=>
+      `<li class="${e[2]==='NOTE'?'note-ev':''}"><div class="note">${e[2]==='NOTE'?'<span class="note-tag">NOTE</span>':''}${e[0]}</div><div class="when">${e[1]}</div></li>`).join('')}</ul>
+    <div class="noteform">
+      <input id="noteInput" placeholder="Add an internal note (e.g. customer asked to deliver after 5pm)…"
+        onkeydown="if(event.key==='Enter')addNote(${o.no})">
+      <button class="btn btn-secondary" onclick="addNote(${o.no})">📝 Add note</button>
+    </div></div>`;
+}
+function addNote(no){
+  const v = $('noteInput').value.trim(); if(!v) return;
+  findOrder(no).events.push([v,'just now','NOTE']);
+  go('order',no);
+  toast('📝 Internal note saved to the order timeline (team-only)');
+}
+
+function confirmOrder(no){
+  const o = findOrder(no);
+  o.status='CONFIRMED'; o.risk=68; o.level='HIGH';
+  const p = S.products.find(p=>p.name===o.product); if(p) p.stock-=o.qty;
+  o.events.push(['Order confirmed — '+o.qty+' unit(s) reserved from stock (atomic — double-selling impossible)','just now']);
+  o.events.push(['COD risk: 68% (HIGH) — Address looks incomplete; New customer — no delivery history','just now']);
+  demoStep(2); go('order',no);
+  toast('🛡️ XGBoost risk model scored this order <b>68% HIGH</b> — advance payment recommended');
+}
+function bookCourier(no){
+  openModal(`<h3>Compare courier rates</h3>
+    ${[['Pathao','৳150.00 · ~2 days'],['RedX','৳135.00 · ~3 days'],['Paperfly','৳165.00 · ~4 days']].map(r=>`
+    <div class="rate"><div><b>${r[0]}</b><div class="sub">${r[1]}</div></div>
+      <button class="btn btn-primary" onclick="doBook(${no},'${r[0]}')">Book</button></div>`).join('')}
+    <p class="sub" style="font-size:12px">Double-clicking Book is safe — the server allows exactly one consignment per order.</p>`);
+}
+function doBook(no, courier){
+  closeModal(); const o=findOrder(no);
+  o.status='DISPATCHED'; o.courier=courier; o.track=courier.slice(0,3).toUpperCase()+'-'+no+'-X7K2P9'; o.cstat='Picked up';
+  o.events.push([`Booked with ${courier} — tracking ${o.track}`,'just now']);
+  o.events.push([`SMS to ${o.phone}: "Your order #${no} is on the way via ${courier}. Track: ${o.track}"`,'just now']);
+  demoStep(3); go('order',no);
+  toast(`🚚 Booked with <b>${courier}</b> — tracking code stored, customer SMS sent`);
+}
+function syncStatus(no){
+  const o=findOrder(no);
+  const J=['Picked up','At sorting hub','In transit','Out for delivery','Delivered'];
+  const i=J.indexOf(o.cstat);
+  if(i<J.length-1){ o.cstat=J[i+1];
+    o.events.push([`${o.courier}: ${o.cstat}`,'just now']);
+    if(o.cstat==='Delivered'){o.status='DELIVERED'; o.events.push(['Package delivered to customer','just now']);}
+  }
+  go('order',no);
+}
+function qrInvoice(no,type){
+  const o=findOrder(no);
+  const amt = type==='ADVANCE'? o.total*0.2 : o.total;
+  openModal(`<h3>Bangla QR invoice (sandbox)</h3>
+    <div style="text-align:center">
+      <p class="sub">${type==='ADVANCE'?'20% advance booking fee':'Full payment'} for order #${no}</p>
+      <div style="font-size:30px;font-weight:800;margin:10px 0">${money(amt)}</div>
+      <div style="display:flex;justify-content:center;border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px">${qrSvg('INV-'+no+type)}</div>
+      <p class="sub" style="font-size:12px;margin-bottom:12px">Customer scans with any Bangla QR wallet (bKash, Nagad, bank apps)</p>
+      <button class="btn btn-success" style="width:100%;justify-content:center" onclick="payInvoice(${no},'${type}',${amt})">Simulate customer payment</button>
+      <p class="sub" style="font-size:11.5px;margin-top:10px">Fires the payment webhook: order marked paid + ledger entry, atomically, exactly once.</p>
+    </div>`);
+}
+function payInvoice(no,type,amt){
+  closeModal(); const o=findOrder(no);
+  const fee=Math.round(amt*0.01*100)/100, vat=Math.round(fee*0.15*100)/100, net=Math.round((amt-fee-vat)*100)/100;
+  o.pay = type==='ADVANCE' ? 'PARTIAL' : 'PAID';
+  S.ledger.unshift({order:no, gross:amt, fee, vat, net, when:'just now'});
+  o.events.push([`Payment received: ${money(amt)} (txn SSLCZ-2026-X4B9) — fee ${money(fee)} + VAT ${money(vat)}, net ${money(net)}`,'just now']);
+  demoStep(4); go('order',no);
+  toast(`💳 Settled atomically — ledger entry: gross ${money(amt)}, net <b>${money(net)}</b>`);
+}
+
+/* =====================================================================
+   INVENTORY  (Phase 4)
+   ===================================================================== */
+function rInventory(){
+  const low = S.products.filter(p=>p.stock<=p.reorder);
+  return `
+  <div class="page-head"><div><h1>Inventory</h1><p class="sub">One central stock ledger — every channel sells from the same numbers.</p></div>
+    <button class="btn btn-primary" onclick="toast('➕ In the real app this opens the add-product form')">＋ Add product</button></div>
+  ${low.length?`<div class="card" style="border-color:#fcd34d;background:#fffdf5;padding:14px 20px;margin-bottom:16px">
+    ⚠️ <b>${low.length} product${low.length>1?'s':''} low on stock:</b> ${low.map(p=>p.name).join(', ')} — restock soon.</div>`:''}
+  <div class="card" style="overflow-x:auto"><table>
+    <tr><th>SKU</th><th>Product</th><th>Price</th><th>Stock</th><th>Reorder at</th></tr>
+    ${S.products.map(p=>`<tr>
+      <td style="font-family:monospace;font-size:12px;color:var(--muted)">${p.sku}</td>
+      <td><b>${p.name}</b></td><td>${money(p.price)}</td>
+      <td><span class="badge ${p.stock<=p.reorder?'b-HIGH':'b-LOW'}">${p.stock} in stock</span></td>
+      <td style="color:var(--muted)">${p.reorder}</td></tr>`).join('')}
+  </table></div>
+  <div class="hint">Also syncs with external stores: a Shopify/WooCommerce order calls our webhook and decrements this same central stock atomically.</div>`;
+}
+
+/* =====================================================================
+   SHIPPING  (Phase 5)
+   ===================================================================== */
+function rShipping(){
+  const J=['Picked up','At sorting hub','In transit','Out for delivery','Delivered'];
+  const ships = S.orders.filter(o=>o.track);
+  return `
+  <div class="page-head"><div><h1>Shipping</h1><p class="sub">Booked consignments and their live tracking status.</p></div></div>
+  ${ships.length? ships.map(o=>{ const step=J.indexOf(o.cstat)+1; return `
+    <div class="card" style="padding:20px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div><span class="link" onclick="go('order',${o.no})">Order #${o.no}</span>
+          <div class="sub">${o.name} · ${o.dist} · ${o.product} × ${o.qty}</div></div>
+        <div style="display:flex;gap:8px;align-items:center">${badge(o.status)}
+          <span style="background:#f1f5f9;border-radius:8px;padding:4px 10px;font-family:monospace;font-size:12px">${o.courier} · ${o.track}</span></div>
+      </div>
+      <div class="journey">${J.map((l,i)=>`<div class="step"><div class="bar ${i<step?'on':''}"></div><div class="lbl ${i<step?'on':''}">${l}</div></div>`).join('')}</div>
+      ${o.status==='DISPATCHED'?`<div style="text-align:right;margin-top:12px"><button class="btn btn-secondary" onclick="syncStatus(${o.no});go('shipping')">↻ Sync status</button></div>`:''}
+    </div>`;}).join('')
+  : `<div class="card"><div class="empty" style="padding:60px"><div class="big">🚚</div><b>No shipments yet</b>
+     <p style="margin-top:6px">Confirm an order, then book a courier from the order page.</p></div></div>`}`;
+}
+
+/* =====================================================================
+   PAYMENTS  (Phase 6)
+   ===================================================================== */
+function rPayments(){
+  let bal=0; const rows=[...S.ledger].reverse().map(e=>{bal=Math.round((bal+e.net)*100)/100; return {...e,bal};}).reverse();
+  return `
+  <div class="page-head"><div><h1>Payments &amp; Ledger</h1><p class="sub">Every settled payment, always consistent with your orders.</p></div>
+    <button class="btn btn-secondary" onclick="toast('⬇ In the real app this downloads ledger.csv')">⬇ Export CSV</button></div>
+  <div class="card balance" style="margin-bottom:18px">
+    <div class="cap">Available balance (net of fees &amp; VAT)</div>
+    <div class="amt">${money(rows.length?rows[0].bal:0)}</div>
+    <div class="cap" style="margin-top:8px">${S.ledger.length} settlement${S.ledger.length!==1?'s':''} · MDR 1% + VAT 15% on fee</div></div>
+  <div class="card" style="overflow-x:auto"><table>
+    <tr><th>When</th><th>Order</th><th style="text-align:right">Gross</th><th style="text-align:right">Fee (1%)</th>
+        <th style="text-align:right">VAT (15%)</th><th style="text-align:right">Net</th><th style="text-align:right">Balance</th></tr>
+    ${rows.map(e=>`<tr><td style="color:var(--muted)">${e.when}</td>
+      <td><span class="link" onclick="go('order',${e.order})">#${e.order}</span></td>
+      <td style="text-align:right"><b>${money(e.gross)}</b></td>
+      <td style="text-align:right;color:var(--muted)">−${money(e.fee)}</td>
+      <td style="text-align:right;color:var(--muted)">−${money(e.vat)}</td>
+      <td style="text-align:right;color:var(--green);font-weight:700">${money(e.net)}</td>
+      <td style="text-align:right"><b>${money(e.bal)}</b></td></tr>`).join('')}
+  </table></div>`;
+}
+
+/* =====================================================================
+   CUSTOMERS  (directory with rolled-up order history)
+   ===================================================================== */
+function rCustomers(){
+  return `
+  <div class="page-head"><div><h1>Customers</h1><p class="sub">Everyone who has messaged or ordered from your shop.</p></div>
+    <div class="searchbox"><span class="mag">🔍</span><input placeholder="Search name or phone…"
+      oninput="document.querySelectorAll('#custTable tr[data-n]').forEach(r=>r.style.display=r.dataset.n.includes(this.value.toLowerCase())?'':'none')"></div></div>
+  <div class="card" style="overflow-x:auto"><table id="custTable">
+    <tr><th>Customer</th><th>Channels</th><th style="text-align:right">Orders</th>
+        <th style="text-align:right">Return rate</th><th style="text-align:right">Total spent</th><th>Last seen</th></tr>
+    ${S.customers.map(c=>`<tr data-n="${(c.name+' '+c.phone).toLowerCase()}">
+      <td><b>${c.name}</b><div style="color:var(--faint);font-size:12px">${c.phone}</div></td>
+      <td>${c.channels.map(badge).join(' ')}</td>
+      <td style="text-align:right"><b>${c.orders}</b></td>
+      <td style="text-align:right"><span style="${c.rr>30?'color:var(--red);font-weight:700':'color:var(--muted)'}">${c.rr}%</span></td>
+      <td style="text-align:right"><b>${money(c.spent)}</b></td>
+      <td style="color:var(--faint)">${c.last}</td></tr>`).join('')}
+  </table></div>
+  <div class="hint">Return rate feeds straight into the COD risk model — a customer who returned before scores higher risk automatically.</div>`;
+}
+
+/* =====================================================================
+   ANALYTICS  (revenue by day / product / district)
+   ===================================================================== */
+function rAnalytics(){
+  const days = S.analytics;
+  const totalR = days.reduce((s,d)=>s+d[1],0), totalO = days.reduce((s,d)=>s+d[2],0);
+  const maxR = Math.max(...days.map(d=>d[1]), 1);
+  const prods = [['Jamdani Saree',9600,3],['Cotton Panjabi',7250,5],['Classic Watch',4200,2],['Premium T-Shirt',3300,3],['Canvas Backpack',2500,1]];
+  const dists = [['Dhaka',11400,6],['Chattogram',5750,3],['Sylhet',4250,2],['Khulna',3200,2],['Rangpur',2250,1]];
+  const maxP = prods[0][1], maxD = dists[0][1];
+  const statCard=(v,l)=>`<div class="card stat" style="cursor:default"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  return `
+  <div class="page-head"><div><h1>Analytics</h1><p class="sub">Sales performance over the last 14 days.</p></div>
+    <div style="display:flex;gap:6px">${['7d','14d','30d'].map((r,i)=>
+      `<button class="btn ${i===1?'btn-primary':'btn-secondary'}" style="padding:6px 14px;border-radius:99px;font-size:12px"
+        onclick="toast('📊 In the real app this re-queries the range from the API')">${r}</button>`).join('')}</div></div>
+  <div class="stats" style="margin-bottom:18px">
+    ${statCard(money(totalR),'Revenue')}${statCard(totalO,'Orders')}
+    ${statCard(money(totalO?totalR/totalO:0),'Avg order value')}${statCard('17%','Return rate')}
+  </div>
+  <div class="card" style="padding:22px;margin-bottom:18px"><b>Revenue by day</b>
+    <div class="daybars" style="margin-top:18px">${days.map(d=>
+      `<div class="db" style="height:${Math.max(3,Math.round(d[1]/maxR*150))}px">
+        <span class="tip">${d[0]} · ${money(d[1])} · ${d[2]} order${d[2]!==1?'s':''}</span></div>`).join('')}</div>
+    <div style="display:flex;justify-content:space-between;color:var(--faint);font-size:11px;margin-top:6px">
+      <span>${days[0][0]}</span><span>${days[days.length-1][0]}</span></div></div>
+  <div class="grid2">
+    <div class="card" style="padding:22px"><b>Top products</b>
+      ${prods.map(p=>`<div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;font-size:13px"><b>${p[0]}</b>
+          <span style="color:var(--muted)">${money(p[1])} · ${p[2]} pcs</span></div>
+        <div class="hbar"><div style="width:${Math.round(p[1]/maxP*100)}%"></div></div></div>`).join('')}</div>
+    <div class="card" style="padding:22px"><b>Revenue by district</b>
+      ${dists.map(d=>`<div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;font-size:13px"><b>${d[0]}</b>
+          <span style="color:var(--muted)">${money(d[1])} · ${d[2]} orders</span></div>
+        <div class="hbar g"><div style="width:${Math.round(d[1]/maxD*100)}%"></div></div></div>`).join('')}</div>
+  </div>`;
+}
+
+/* =====================================================================
+   ADS  (click-to-message attribution)
+   ===================================================================== */
+function rAds(){
+  const spend = S.ads.reduce((s,a)=>s+a.spend,0), rev = S.ads.reduce((s,a)=>s+a.revenue,0);
+  const statCard=(v,l)=>`<div class="card stat" style="cursor:default"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  return `
+  <div class="page-head"><div><h1>Ads</h1><p class="sub">Click-to-Messenger / WhatsApp ads — every order traces back to the ad that started the chat.</p></div>
+    <button class="btn btn-secondary" onclick="toast('🔗 In the real app this connects your Meta ad account (Marketing API)')">🔗 Connect ad account</button></div>
+  <div class="stats" style="margin-bottom:18px">
+    ${statCard(money(spend),'Ad spend (attributed)')}${statCard(money(rev),'Revenue from ads')}
+    ${statCard((rev/spend).toFixed(1)+'×','Return on ad spend')}${statCard(S.ads.reduce((s,a)=>s+a.orders,0),'Ad-driven orders')}
+  </div>
+  <div class="card" style="overflow-x:auto"><table>
+    <tr><th>Campaign</th><th>Status</th><th style="text-align:right">Spend</th>
+        <th style="text-align:right">Revenue</th><th style="text-align:right">Orders</th><th style="text-align:right">ROAS</th></tr>
+    ${S.ads.map(a=>`<tr>
+      <td><b>${a.title}</b><div style="color:var(--faint);font-size:11.5px;font-family:monospace">${a.id}</div></td>
+      <td><span class="badge ${a.status==='ACTIVE'?'b-LOW':'b-MEDIUM'}">${a.status}</span></td>
+      <td style="text-align:right">${money(a.spend)}</td>
+      <td style="text-align:right"><b>${money(a.revenue)}</b></td>
+      <td style="text-align:right">${a.orders}</td>
+      <td style="text-align:right;font-weight:700;color:${a.revenue/a.spend>=2?'var(--green)':'var(--amber)'}">${(a.revenue/a.spend).toFixed(1)}×</td></tr>`).join('')}
+  </table></div>
+  <div class="hint">Attribution flows automatically: the ad's referral tag arrives in the webhook → sticks to the conversation → every order created from that chat carries the ad id.</div>`;
+}
+
+/* =====================================================================
+   SETTINGS  (Phase 7 threshold)
+   ===================================================================== */
+function rSettings(){
+  return `
+  <div class="page-head"><div><h1>Settings</h1><p class="sub">Your workspace configuration.</p></div></div>
+  <div class="card" style="padding:22px;max-width:620px;margin-bottom:16px"><b>Profile</b>
+    <dl style="margin-top:14px">
+      <div><dt>Business</dt><dd>Dhaka Trends BD</dd></div>
+      <div><dt>Name</dt><dd>Demo Merchant</dd></div>
+      <div><dt>Email</dt><dd>demo@fcomflow.com</dd></div>
+      <div><dt>Role</dt><dd>OWNER</dd></div></dl></div>
+
+  <div class="card" style="padding:22px;max-width:620px;margin-bottom:16px"><b>🔌 Connected channels</b>
+    <p class="sub" style="margin:6px 0 14px">Connect your real Facebook Page, Instagram, WhatsApp number, Telegram or Viber bot — one click.</p>
+    <div class="team-row"><div><b>Dhaka Trends BD Page</b><div class="sub" style="font-size:12px">Messenger · connected</div></div><span class="badge b-LOW">LIVE</span></div>
+    <div class="team-row"><div><b>@dhakatrends_bot</b><div class="sub" style="font-size:12px">Telegram · connected</div></div><span class="badge b-LOW">LIVE</span></div>
+    <button class="btn btn-secondary" onclick="toast('🔌 In the real app this opens the one-click channel connect flow')">＋ Connect a channel</button></div>
+
+  <div class="card" style="padding:22px;max-width:620px;margin-bottom:16px"><b>⏰ Automation</b>
+    <p class="sub" style="margin:6px 0 14px">Keep customers updated without lifting a finger.</p>
+    <label style="display:flex;justify-content:space-between;align-items:center;gap:14px;cursor:pointer;margin-bottom:14px">
+      <span style="font-size:13px"><b>Order status messages</b><br><span class="sub">Auto-message the customer when an order is confirmed, shipped or delivered.</span></span>
+      <input type="checkbox" checked style="width:18px;height:18px"></label>
+    <div class="field"><label>Away message (out of hours)</label>
+      <input value="Thanks for your message! We're closed now and will reply by 10am 🙏"></div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label>Opens at (hour)</label><input value="9"></div>
+      <div class="field" style="flex:1"><label>Closes at (hour)</label><input value="22"></div></div></div>
+
+  <div class="card" style="padding:22px;max-width:620px;margin-bottom:16px"><b>👥 Team</b>
+    <p class="sub" style="margin:6px 0 14px">Agents share your inbox and orders.</p>
+    ${S.team.map(u=>`<div class="team-row"><div><b>${u.name}</b><span class="role-chip">${u.role}</span>
+      <div class="sub" style="font-size:12px">${u.email}</div></div>
+      ${u.role!=='OWNER'?`<button class="btn btn-danger" style="padding:5px 12px" onclick="toast('👥 In the real app this removes the agent and releases their conversations')">Remove</button>`:''}</div>`).join('')}
+    <button class="btn btn-secondary" onclick="toast('👥 In the real app this creates an AGENT login (name, email, password)')">＋ Add agent</button></div>
+
+  <div class="card" style="padding:22px;max-width:620px;margin-bottom:16px"><b>💬 Quick-reply templates</b>
+    <p class="sub" style="margin:6px 0 14px">Saved replies with variables:
+      <span class="tpl-var">{customer}</span> <span class="tpl-var">{shop}</span> <span class="tpl-var">{agent}</span> — filled in automatically when inserted.</p>
+    ${S.templates.map(t=>`<div class="team-row"><div><b>${t.title}</b>
+      <div class="sub" style="font-size:12px">${t.body}</div></div></div>`).join('')}</div>
+
+  <div class="card" style="padding:22px;max-width:620px"><b>COD risk threshold</b>
+    <p class="sub" style="margin:6px 0 18px">Orders scoring at or above this show the high-risk banner and the one-click advance-payment action.</p>
+    <div style="display:flex;align-items:center;gap:16px">
+      <input type="range" min="0" max="100" value="60" style="flex:1;accent-color:var(--indigo)" oninput="$('thv').textContent=this.value+'%'">
+      <span id="thv" style="background:#f1f5f9;border-radius:10px;padding:6px 12px;font-weight:800">60%</span></div></div>`;
+}
+
+/* ---------- pseudo Bangla-QR (deterministic pattern from a seed) ---------- */
+function qrSvg(seed){
+  const n=21; let h=2166136261; let cells='';
+  const bit=i=>{h^=i+seed.charCodeAt(i%seed.length);h=Math.imul(h,16777619);return (h>>>15)%5<2;};
+  const finder=(x,y)=>(x<7&&y<7)||(x>=n-7&&y<7)||(x<7&&y>=n-7);
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){ if(finder(x,y))continue; if(bit(y*n+x))cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`; }
+  const F=(x,y)=>`<rect x="${x}" y="${y}" width="7" height="7"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#000"/>`;
+  return `<svg viewBox="0 0 ${n} ${n}" width="170" height="170"><rect width="${n}" height="${n}" fill="#fff"/><g fill="#000">${cells}${F(0,0)}${F(n-7,0)}${F(0,n-7)}</g></svg>`;
+}
+</script>
+</body>
+</html>

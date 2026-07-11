@@ -1,0 +1,81 @@
+// F-ComFlow API server — entry point.
+// Express app + Socket.io on the same HTTP server.
+import express from 'express';
+import http from 'http';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { config } from './config';
+import { initSocket } from './lib/socket';
+import { ApiError } from './lib/errors';
+import { startTrackingPoller } from './services/tracker';
+
+import authRoutes from './routes/auth.routes';       // Phase 1
+import inboxRoutes from './routes/inbox.routes';     // Phase 2
+import aiRoutes from './routes/ai.routes';           // Phase 3
+import productRoutes from './routes/product.routes'; // Phase 4
+import orderRoutes from './routes/order.routes';     // Phase 4 + 7
+import courierRoutes from './routes/courier.routes'; // Phase 5
+import paymentRoutes from './routes/payment.routes'; // Phase 6
+import statsRoutes from './routes/stats.routes';     // Dashboard overview
+import webhookRoutes from './routes/webhook.routes'; // Phase 4: external store sync
+import metaRoutes from './routes/meta.routes';       // REAL Meta/WhatsApp webhooks
+import channelRoutes from './routes/channel.routes'; // Channel connections (Settings)
+import telegramRoutes from './routes/telegram.routes'; // Telegram bot webhook
+import viberRoutes from './routes/viber.routes';       // Viber bot webhook
+import livechatRoutes from './routes/livechat.routes'; // Website chat widget
+import emailRoutes from './routes/email.routes';       // Email inbound webhook
+import adsRoutes from './routes/ads.routes';           // Ads attribution + Marketing API
+import templateRoutes from './routes/templates.routes'; // Quick-reply templates
+import payRoutes from './routes/pay.routes';           // PUBLIC customer pay link
+import customerRoutes from './routes/customer.routes'; // Customer directory
+
+const app = express();
+const server = http.createServer(app);
+initSocket(server);
+
+app.set('trust proxy', 1); // correct client IPs behind a reverse proxy (deployment)
+app.use(cors({ origin: config.clientUrl, credentials: true }));
+// Keep the RAW request bytes — Meta's webhook signature (HMAC-SHA256) must be
+// computed over the exact raw body, not the re-serialized JSON.
+app.use(express.json({
+  verify: (req: any, _res, buf) => { req.rawBody = buf; },
+}));
+app.use(cookieParser());
+
+// Phase 0 exit gate: health-check endpoint
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'fcomflow-api' }));
+
+app.use('/api/auth', authRoutes);
+app.use('/api/inbox', inboxRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/couriers', courierRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/meta', metaRoutes);       // public: Meta calls this
+app.use('/api/channels', channelRoutes); // authed: merchant connects channels
+app.use('/api/telegram', telegramRoutes); // public: Telegram calls this
+app.use('/api/viber', viberRoutes);       // public: Viber calls this
+app.use('/api/livechat', livechatRoutes); // public: the website widget calls this
+app.use('/api/email', emailRoutes);       // public: mail provider calls this
+app.use('/api/ads', adsRoutes);           // authed: ads attribution + campaigns
+app.use('/api/templates', templateRoutes); // authed: quick-reply templates
+app.use('/api/pay', payRoutes);            // public: customer advance-payment link
+app.use('/api/customers', customerRoutes); // authed: customer directory
+
+// Global error handler: ApiError -> its status code; anything else -> 500.
+// Never leaks stack traces to the client.
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (err instanceof ApiError) {
+    return res.status(err.status).json({ error: err.message });
+  }
+  console.error('[error]', err);
+  res.status(500).json({ error: 'Something went wrong' });
+});
+
+server.listen(config.port, () => {
+  console.log(`✅ F-ComFlow API running on http://localhost:${config.port}`);
+  startTrackingPoller(); // auto-pulls live courier statuses in the background
+});

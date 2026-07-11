@@ -1,0 +1,107 @@
+# F-ComFlow full stack — one command boots everything (Phase 0 exit gate):
+#   cp .env.example .env      (edit the secrets)
+#   docker compose up -d --build
+#
+# Then open http://localhost:3000
+# Seed the demo data once:  docker compose exec server npm run db:seed
+#
+# Database only (for local npm-run-dev development):
+#   docker compose up -d postgres
+services:
+  postgres:
+    image: postgres:16
+    container_name: fcomflow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fcomflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fcomflow}
+      POSTGRES_DB: fcomflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fcomflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ai:
+    build: ./ai
+    container_name: fcomflow-ai
+    restart: unless-stopped
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "8000:8000"
+
+  server:
+    build: ./server
+    container_name: fcomflow-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://fcomflow:${POSTGRES_PASSWORD:-fcomflow}@postgres:5432/fcomflow
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      AI_SERVICE_URL: http://ai:8000
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      PORT: 4000
+      # Public https URL of THIS API (webhooks: Telegram/Viber/email/couriers)
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-}
+      # Real Meta / WhatsApp integration + one-click connect
+      META_VERIFY_TOKEN: ${META_VERIFY_TOKEN:-}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      # Email channel (SMTP outbound + inbound-parse webhook token)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      EMAIL_WEBHOOK_TOKEN: ${EMAIL_WEBHOOK_TOKEN:-}
+      # Real courier tracking (blank = sandbox mocks)
+      PATHAO_BASE_URL: ${PATHAO_BASE_URL:-}
+      PATHAO_CLIENT_ID: ${PATHAO_CLIENT_ID:-}
+      PATHAO_CLIENT_SECRET: ${PATHAO_CLIENT_SECRET:-}
+      PATHAO_USERNAME: ${PATHAO_USERNAME:-}
+      PATHAO_PASSWORD: ${PATHAO_PASSWORD:-}
+      PATHAO_STORE_ID: ${PATHAO_STORE_ID:-}
+      PATHAO_WEBHOOK_SECRET: ${PATHAO_WEBHOOK_SECRET:-}
+      REDX_BASE_URL: ${REDX_BASE_URL:-}
+      REDX_ACCESS_TOKEN: ${REDX_ACCESS_TOKEN:-}
+      STEADFAST_BASE_URL: ${STEADFAST_BASE_URL:-}
+      STEADFAST_API_KEY: ${STEADFAST_API_KEY:-}
+      STEADFAST_SECRET_KEY: ${STEADFAST_SECRET_KEY:-}
+      COURIER_POLL_MS: ${COURIER_POLL_MS:-}
+      # Real bKash checkout (blank = mock payment flow only)
+      BKASH_BASE_URL: ${BKASH_BASE_URL:-}
+      BKASH_APP_KEY: ${BKASH_APP_KEY:-}
+      BKASH_APP_SECRET: ${BKASH_APP_SECRET:-}
+      BKASH_USERNAME: ${BKASH_USERNAME:-}
+      BKASH_PASSWORD: ${BKASH_PASSWORD:-}
+    ports:
+      - "4000:4000"
+
+  client:
+    build:
+      context: ./client
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+        # Baked in at build time; defaults to META_APP_ID so one-click just works
+        NEXT_PUBLIC_META_APP_ID: ${NEXT_PUBLIC_META_APP_ID:-${META_APP_ID:-}}
+        NEXT_PUBLIC_META_WA_CONFIG_ID: ${NEXT_PUBLIC_META_WA_CONFIG_ID:-}
+    container_name: fcomflow-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

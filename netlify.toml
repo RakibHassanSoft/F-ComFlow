@@ -1,0 +1,15 @@
+# Netlify config — deploys the Next.js dashboard from the client/ subfolder.
+# The Next.js runtime is auto-detected by Netlify; this file just points the
+# build at the right directory.
+
+[build]
+  base    = "client"          # monorepo: the app lives in client/
+  command = "npm run build"
+
+# Environment variables to set in Netlify (UI or CLI — not committed here):
+#   NEXT_PUBLIC_API_URL           = https://<your-render-api-url>
+#   NEXT_PUBLIC_META_APP_ID       = (optional, for one-click Meta connect)
+#   NEXT_PUBLIC_META_WA_CONFIG_ID = (optional, WhatsApp embedded signup)
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev --name init",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
+    "db:check": "node scripts/check-db.js",
     "test": "node --import tsx --test \"src/__tests__/**/*.test.ts\""
   },
   "prisma": {

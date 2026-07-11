@@ -73,37 +73,165 @@ ai/       → AI সার্ভিস (চ্যাট পড়া + রিস
 
 ---
 
-## ৩. পুরো সিস্টেম কীভাবে কাজ করে (আর্কিটেকচার)
+# ৩. পুরো সিস্টেম কীভাবে কাজ করে (System Architecture)
 
-```
-  কাস্টমার                          মার্চেন্ট (দোকানদার)
-     │                                    │
-     ▼                                    ▼
- Messenger/WhatsApp/              Next.js ড্যাশবোর্ড (client)
- Telegram/Viber/ওয়েবচ্যাট                 │  ▲
-     │                                    │  │ REST API + Socket.io (লাইভ)
-     │ webhook (মেসেজ এলে              ▼  │
-     │  Meta আমাদের জানায়)     ┌──────────────────────┐
-     └──────────────────────►  │  Express API (server) │
-                               │  JWT auth, সব লজিক     │
-                               └──────┬────────┬───────┘
-                                      │        │
-                            ┌─────────▼──┐  ┌──▼──────────────┐
-                            │ PostgreSQL │  │ FastAPI AI (ai)  │
-                            │  ডাটাবেস    │  │ পার্সার + ML মডেল │
-                            └────────────┘  └─────────────────┘
-                                      │
-                     বাইরের সার্ভিস: Pathao/RedX/Steadfast (কুরিয়ার),
-                     bKash/Bangla QR (পেমেন্ট), Meta Graph API (রিপ্লাই পাঠানো)
-```
+## ৩.১ উচ্চ-স্তরের আর্কিটেকচার (High-Level Architecture)
 
-**সবচেয়ে গুরুত্বপূর্ণ ডিজাইন সিদ্ধান্ত: graceful fallback।**
-AI সার্ভিস বন্ধ থাকলে? API-এর ভেতরে TypeScript-এ লেখা বিকল্প ইঞ্জিন আছে — পার্সিং আর
-রিস্ক স্কোরিং তবুও চলবে। কুরিয়ার/পেমেন্টের আসল API key না থাকলে? বিল্ট-ইন **simulator**
-চলবে। অর্থাৎ **কোনো অবস্থাতেই ডেমো ভাঙে না।**
+```text
+                         ┌──────────────────────────────────────────────┐
+                         │                  Customer                    │
+                         │ Messenger • WhatsApp • Telegram • Web Chat   │
+                         └──────────────────┬───────────────────────────┘
+                                            │
+                                Incoming Message (Webhook)
+                                            │
+                                            ▼
+                         ┌──────────────────────────────────────────────┐
+                         │          Meta Graph API / Webhook            │
+                         └──────────────────┬───────────────────────────┘
+                                            │
+                                            ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                           Express.js Backend API (Server)                                │
+│                                                                                          │
+│  • JWT Authentication                                                                    │
+│  • Business Logic                                                                        │
+│  • Message Processing                                                                    │
+│  • Order Management                                                                      │
+│  • REST API                                                                              │
+│  • Socket.io (Real-time Communication)                                                   │
+└───────────────────────┬───────────────────────────────┬──────────────────────────────────┘
+                        │                               │
+                        │                               │
+                        ▼                               ▼
+          ┌────────────────────────┐      ┌──────────────────────────────┐
+          │     PostgreSQL DB      │      │      FastAPI AI Service      │
+          │                        │      │                              │
+          │ • Users                │      │ • NLP Parser                 │
+          │ • Products             │      │ • Intent Detection           │
+          │ • Messages             │      │ • Risk Scoring               │
+          │ • Orders               │      │ • AI / ML Models             │
+          └────────────────────────┘      └──────────────────────────────┘
+                        ▲
+                        │
+                        │ REST API + Socket.io
+                        │
+                        ▼
+          ┌──────────────────────────────────────────────┐
+          │        Next.js Merchant Dashboard            │
+          │                                              │
+          │ • Live Chat                                  │
+          │ • Orders                                     │
+          │ • Products                                   │
+          │ • Analytics                                  │
+          │ • Customer Management                        │
+          └──────────────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────────────
+
+External Services
+
+• Meta Graph API        → Receive & Send Messages
+• Pathao / RedX         → Courier Integration
+• Steadfast             → Courier Integration
+• bKash / Bangla QR     → Payment Processing
+```
 
 ---
 
+## ৩.২ মেসেজ ফ্লো (Message Flow)
+
+```text
+Customer
+    │
+    ▼
+Messenger / WhatsApp
+    │
+    ▼
+Meta Webhook
+    │
+    ▼
+Express API
+    │
+    ├────────► Store Message (PostgreSQL)
+    │
+    ├────────► FastAPI AI
+    │              │
+    │              ▼
+    │      Intent + Entity Detection
+    │
+    ▼
+Business Logic
+    │
+    ├────────► Create / Update Order
+    ├────────► Generate Reply
+    ├────────► Notify Merchant
+    │
+    ▼
+Next.js Dashboard (Socket.io)
+```
+
+---
+
+## ৩.৩ প্রতিটি কম্পোনেন্টের দায়িত্ব
+
+| Component | Responsibility |
+|-----------|----------------|
+| **Customer Channels** | Messenger, WhatsApp, Telegram ও Web Chat থেকে মেসেজ পাঠায় |
+| **Meta Webhook** | নতুন মেসেজ আমাদের সার্ভারে পাঠায় |
+| **Express.js API** | Authentication, Business Logic, Order Processing, API Integration |
+| **FastAPI AI** | NLP Parsing, Intent Detection, AI Analysis, Risk Scoring |
+| **PostgreSQL** | Users, Messages, Products, Orders ও Conversations সংরক্ষণ করে |
+| **Next.js Dashboard** | Merchant-এর জন্য Live Chat, Orders, Analytics ও Customer Management |
+| **External Services** | Payment Gateway, Courier এবং Meta API Integration |
+
+---
+
+## ৩.৪ Graceful Fallback Architecture
+
+এই সিস্টেমের সবচেয়ে গুরুত্বপূর্ণ ডিজাইন সিদ্ধান্ত হলো **Graceful Fallback**।
+
+যদি কোনো একটি সার্ভিস সাময়িকভাবে বন্ধ হয়ে যায়, তাহলে পুরো সিস্টেম বন্ধ না হয়ে বিকল্প ব্যবস্থা ব্যবহার করে কাজ চালিয়ে যায়।
+
+### AI Service Down
+
+```text
+Express API
+      │
+      ├────────► FastAPI Available?
+      │
+      ├── Yes ─► AI Parser
+      │
+      └── No ──► Built-in TypeScript Parser
+```
+
+FastAPI AI সার্ভিস বন্ধ থাকলেও Express API-এর ভেতরে থাকা TypeScript ভিত্তিক Parser এবং Risk Scoring Engine স্বয়ংক্রিয়ভাবে কাজ শুরু করে। ফলে Message Parsing এবং Order Detection বন্ধ হয় না।
+
+---
+
+### External API Down
+
+```text
+Courier / Payment API
+        │
+        ├── Connected ─► Real API
+        │
+        └── Offline ───► Built-in Simulator
+```
+
+যদি Courier অথবা Payment Gateway-এর API Key না থাকে অথবা সার্ভিস সাময়িকভাবে অকার্যকর হয়, তাহলে Built-in Simulator ব্যবহার করে ডেমো স্বাভাবিকভাবে চলতে থাকে।
+
+
+## ফলাফল
+
+- ✅ AI Service বন্ধ হলেও সিস্টেম সচল থাকে।
+- ✅ Courier API না থাকলেও Demo চালানো যায়।
+- ✅ Payment Gateway না থাকলেও Flow সম্পূর্ণ দেখা যায়।
+- ✅ কোনো অবস্থাতেই Presentation বা Demo ভেঙে যায় না।
+- ✅ Production এবং Demo — উভয় পরিবেশেই একই Architecture ব্যবহার করা যায়।
+
+---
 ## ৪. ফিচারগুলো কীভাবে কাজ করে (কোডসহ ব্যাখ্যা)
 
 ### ৪.১ লগইন ও Multi-tenancy (একাধিক দোকান, আলাদা ডাটা)

@@ -36,17 +36,49 @@ router.post('/courier/pathao', async (req, res, next) => {
       res.setHeader('X-Pathao-Merchant-Webhook-Integration-Secret', secret);
     }
 
-    const { consignment_id, order_status } = req.body || {};
-    if (!consignment_id) return res.status(202).json({ ok: true }); // ping/test event
+    // Pathao's real webhook carries the status in `event` (e.g. "order.delivered",
+    // "order.in-transit", "order.returned"); older/test payloads may use
+    // `order_status`. The handshake event ("webhook_integration") and any ping
+    // carry no consignment_id — just 202 them (the secret header above is what
+    // Pathao's handshake actually checks).
+    const { consignment_id, order_status, event } = req.body || {};
+    if (!consignment_id || event === 'webhook_integration') {
+      return res.status(202).json({ ok: true });
+    }
 
+    const statusText = event || order_status;
     const order = await prisma.order.findFirst({
       where: { trackingCode: String(consignment_id), courierName: 'Pathao' },
     });
-    if (order && order_status) {
-      await applyTrackingUpdate(order.id, canonicalStatus(String(order_status)));
+    if (order && statusText) {
+      await applyTrackingUpdate(order.id, canonicalStatus(String(statusText)));
     }
 
     res.status(202).json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// POST /api/webhooks/courier/redx?token=<REDX_WEBHOOK_TOKEN>
+// RedX pushes parcel status changes here. RedX puts credentials in the query
+// string (see their webhook docs), so we verify ?token= against our env value.
+// Payload: { tracking_number, status, message_en, invoice_number, ... }.
+router.post('/courier/redx', async (req, res, next) => {
+  try {
+    const expected = process.env.REDX_WEBHOOK_TOKEN;
+    if (expected && req.query.token !== expected) {
+      throw new ApiError(403, 'Invalid RedX webhook token');
+    }
+    const { tracking_number, status, message_en } = req.body || {};
+    if (!tracking_number) return res.status(200).json({ ok: true }); // ping/test
+
+    const order = await prisma.order.findFirst({
+      where: { trackingCode: String(tracking_number), courierName: 'RedX' },
+    });
+    const raw = status || message_en;
+    if (order && raw) {
+      await applyTrackingUpdate(order.id, canonicalStatus(String(raw)));
+    }
+    res.status(200).json({ ok: true });
   } catch (err) { next(err); }
 });
 

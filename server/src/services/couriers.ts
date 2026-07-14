@@ -45,16 +45,34 @@ export interface CourierAdapter {
 // The canonical delivery journey every carrier's vocabulary maps onto
 export const COURIER_JOURNEY = ['Picked up', 'At sorting hub', 'In transit', 'Out for delivery', 'Delivered'];
 
-// Map any carrier's raw status text onto our canonical journey by keywords.
+// Map any carrier's raw status onto our canonical journey by keywords. Handles
+// plain status text (RedX/Steadfast) AND Pathao's webhook `event` strings like
+// "order.delivered", "order.in-transit", "order.assigned-for-delivery".
 // Falls back to the raw text so nothing is ever lost.
 export function canonicalStatus(raw: string): string {
-  const s = raw.toLowerCase().replace(/_/g, ' ');
-  if (/deliver(ed)?$|delivery.?done|partial deliver/.test(s) || s === 'delivered') return 'Delivered';
-  if (/return|cancel|failed/.test(s)) return 'Returned';
-  if (/out.?for.?delivery|last.?mile|rider.?assigned.*delivery/.test(s)) return 'Out for delivery';
-  if (/transit|on.?the.?way|forwarded/.test(s)) return 'In transit';
-  if (/sort|hub|received.?at|warehouse|hold|in.?review/.test(s)) return 'At sorting hub';
-  if (/pick|collected|assigned|pending/.test(s)) return 'Picked up';
+  // Normalise separators: "order.assigned-for-delivery" -> "order assigned for delivery"
+  const s = raw.toLowerCase().replace(/[._-]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // RedX mapped status values (docs): resolve the ambiguous ones explicitly,
+  // before the generic keyword rules below.
+  if (s === 'ready for delivery') return 'Picked up';          // received from merchant
+  if (s === 'delivery in progress') return 'Out for delivery'; // dispatched to rider
+  if (s === 'agent returning') return 'Return in progress';    // return under way (not yet returned)
+  if (s === 'agent area change') return 'Area change';
+
+  // A FAILED attempt or an on-hold parcel is NOT a terminal return — surface it
+  // without triggering restock. Check this before the return/deliver rules.
+  if (/hold/.test(s) && !/return/.test(s)) return 'On hold';
+  if (/(deliver\w*|pickup)\s+(attempt\w*\s+)?fail|pickup\s+cancel/.test(s) && !/return/.test(s)) {
+    return 'Delivery failed';
+  }
+
+  if (/deliver(ed|y done)|partial deliver/.test(s) && !/fail/.test(s)) return 'Delivered';
+  if (/return|to merchant|cancel/.test(s)) return 'Returned';
+  if (/out for delivery|assigned for delivery|rider assigned|last mile/.test(s)) return 'Out for delivery';
+  if (/transit|on the way|forwarded|shipped/.test(s)) return 'In transit';
+  if (/sort|hub|received at|warehouse|in review/.test(s)) return 'At sorting hub';
+  if (/pick|collected|assigned|pending|requested|processing/.test(s)) return 'Picked up';
   return raw; // unknown vocabulary — show it as-is
 }
 
@@ -69,15 +87,16 @@ function mockTracking(prefix: string, orderNumber: number): string {
 }
 
 // ================================ PATHAO ================================
-// Docs: Pathao Courier Merchant API. Sandbox base URL is the default so you
-// can test bookings without real parcels.
+// Docs: Pathao Courier Merchant API (merchant.pathao.com/developer). Sandbox is
+// the default so you can test bookings without real parcels. For production set
+// PATHAO_BASE_URL=https://api-hermes.pathao.com (the current live host).
 //   PATHAO_BASE_URL      (default: https://courier-api-sandbox.pathao.com)
 //   PATHAO_CLIENT_ID / PATHAO_CLIENT_SECRET / PATHAO_USERNAME / PATHAO_PASSWORD
 //   PATHAO_STORE_ID      (from your Pathao merchant panel)
 class PathaoAdapter implements CourierAdapter {
   name = 'Pathao';
   private token: { value: string; expiresAt: number } | null = null;
-  private cityCache: Map<string, { cityId: number; zoneId: number }> = new Map();
+  private cityCache: Map<string, { cityId: number; zoneId: number; areaId: number | null }> = new Map();
 
   private base() { return process.env.PATHAO_BASE_URL || 'https://courier-api-sandbox.pathao.com'; }
   isLive() {
@@ -121,7 +140,7 @@ class PathaoAdapter implements CourierAdapter {
   // Pathao addresses use numeric city/zone ids — resolve the district name
   // once and cache it. (Zone: we take the city's first zone; merchants can
   // refine this later, the parcel still routes by the text address.)
-  private async resolveCity(district: string): Promise<{ cityId: number; zoneId: number }> {
+  private async resolveCity(district: string): Promise<{ cityId: number; zoneId: number; areaId: number | null }> {
     const key = district.toLowerCase();
     const cached = this.cityCache.get(key);
     if (cached) return cached;
@@ -136,7 +155,15 @@ class PathaoAdapter implements CourierAdapter {
     const zone = (zones.data?.data ?? [])[0];
     if (!zone) throw new Error(`Pathao has no zones for ${district}`);
 
-    const resolved = { cityId: city.city_id, zoneId: zone.zone_id };
+    // Pathao's create-order needs an area id; take the zone's first area.
+    // Best-effort: if the area list fails, booking still tries with city+zone.
+    let areaId: number | null = null;
+    try {
+      const areas = await this.api(`/aladdin/api/v1/zones/${zone.zone_id}/area-list`);
+      areaId = (areas.data?.data ?? [])[0]?.area_id ?? null;
+    } catch { /* area is optional/auto-detected on newer API versions */ }
+
+    const resolved = { cityId: city.city_id, zoneId: zone.zone_id, areaId };
     this.cityCache.set(key, resolved);
     return resolved;
   }
@@ -164,7 +191,7 @@ class PathaoAdapter implements CourierAdapter {
   async book(info: BookingInfo): Promise<{ trackingCode: string }> {
     if (!this.isLive()) return { trackingCode: mockTracking('PTH', info.orderNumber) };
 
-    const { cityId, zoneId } = await this.resolveCity(info.district);
+    const { cityId, zoneId, areaId } = await this.resolveCity(info.district);
     const order = await this.api('/aladdin/api/v1/orders', {
       method: 'POST',
       body: JSON.stringify({
@@ -175,8 +202,9 @@ class PathaoAdapter implements CourierAdapter {
         recipient_address: `${info.address}, ${info.district}`,
         recipient_city: cityId,
         recipient_zone: zoneId,
-        delivery_type: 48,
-        item_type: 2,
+        ...(areaId ? { recipient_area: areaId } : {}),
+        delivery_type: 48,       // 48 = normal delivery, 12 = on-demand
+        item_type: 2,            // 1 = document, 2 = parcel
         item_quantity: info.quantity,
         item_weight: info.weightKg,
         amount_to_collect: Math.round(info.codAmount),
@@ -197,14 +225,33 @@ class PathaoAdapter implements CourierAdapter {
 }
 
 // ================================ REDX ================================
-//   REDX_BASE_URL       (default: https://sandbox.redx.com.bd/v1.0.0-beta)
-//   REDX_ACCESS_TOKEN   (from the RedX merchant panel / developer portal)
+// Docs: redx.com.bd/developer-api. Production base URL is
+// https://openapi.redx.com.bd/v1.0.0-beta (sandbox is the default below).
+//   REDX_BASE_URL        (default: https://sandbox.redx.com.bd/v1.0.0-beta)
+//   REDX_ACCESS_TOKEN    (JWT from the RedX developer portal)
+//   REDX_PICKUP_STORE_ID (optional: your pickup store id; auto-detected if unset)
 class RedXAdapter implements CourierAdapter {
   name = 'RedX';
   private areaCache: Map<string, { id: number; name: string }> = new Map();
+  private pickupStoreId: string | null = null;
 
   private base() { return process.env.REDX_BASE_URL || 'https://sandbox.redx.com.bd/v1.0.0-beta'; }
   isLive() { return Boolean(process.env.REDX_ACCESS_TOKEN); }
+
+  // pickup_store_id is OPTIONAL on create-parcel (RedX falls back to the
+  // account's default pickup store). Prefer the explicit env value; otherwise
+  // use the first registered pickup store. Never throws — returns null if none.
+  private async resolvePickupStore(): Promise<string | null> {
+    if (process.env.REDX_PICKUP_STORE_ID) return String(process.env.REDX_PICKUP_STORE_ID);
+    if (this.pickupStoreId) return this.pickupStoreId;
+    try {
+      const res = await this.api('/pickup/stores');
+      const stores = res.pickup_stores ?? res.stores ?? res.data ?? [];
+      const id = stores[0]?.id ?? stores[0]?.pickup_store_id;
+      if (id) { this.pickupStoreId = String(id); return this.pickupStoreId; }
+    } catch { /* optional — RedX uses the account default if we omit it */ }
+    return null;
+  }
 
   private async api(path: string, options: RequestInit = {}): Promise<any> {
     const res = await fetch(`${this.base()}${path}`, {
@@ -250,6 +297,7 @@ class RedXAdapter implements CourierAdapter {
     if (!this.isLive()) return { trackingCode: mockTracking('RDX', info.orderNumber) };
 
     const area = await this.resolveArea(info.district);
+    const pickupStoreId = await this.resolvePickupStore();
     const parcel = await this.api('/parcel', {
       method: 'POST',
       body: JSON.stringify({
@@ -262,6 +310,7 @@ class RedXAdapter implements CourierAdapter {
         cash_collection_amount: String(Math.round(info.codAmount)),
         parcel_weight: Math.round(info.weightKg * 1000), // grams
         value: String(Math.round(info.codAmount) || 1),
+        ...(pickupStoreId ? { pickup_store_id: pickupStoreId } : {}),
       }),
     });
     const trackingId = parcel.tracking_id;

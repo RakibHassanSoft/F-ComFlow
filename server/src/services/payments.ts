@@ -1,7 +1,7 @@
 // Shared payment settlement — used by the authed webhook/pay routes AND the
 // public customer pay link. One atomic transaction: invoice + ledger + order
 // move together, and the same transactionId can never settle twice.
-import { prisma } from '../lib/prisma';
+import { basePrisma, setTenantGuc } from '../lib/prisma';
 import { ApiError } from '../lib/errors';
 
 // Round to exactly 2 decimal places (money!)
@@ -10,7 +10,8 @@ export function round2(n: number): number {
 }
 
 export async function settlePayment(tenantId: string, invoiceId: string, transactionId: string) {
-  return prisma.$transaction(async (tx: any) => {
+  return basePrisma.$transaction(async (tx: any) => {
+    await setTenantGuc(tx, tenantId); // RLS: scope this transaction to the tenant
     const invoice = await tx.invoice.findFirst({
       where: { id: invoiceId, tenantId },
       include: { order: true },

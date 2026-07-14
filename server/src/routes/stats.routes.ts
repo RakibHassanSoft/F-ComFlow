@@ -1,7 +1,7 @@
 // Dashboard overview numbers + tenant settings.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireOwner } from '../middleware/auth';
 import { ApiError } from '../lib/errors';
 
 const router = Router();
@@ -71,7 +71,7 @@ router.get('/analytics', async (req, res, next) => {
 
     const orders = await prisma.order.findMany({
       where: { tenantId: req.tenantId, createdAt: { gte: start }, status: { not: 'CANCELLED' } },
-      include: { product: { select: { name: true } } },
+      include: { items: { include: { product: { select: { name: true } } } } },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -84,6 +84,7 @@ router.get('/analytics', async (req, res, next) => {
     }
     const byProductMap = new Map<string, { revenue: number; quantity: number; orders: number }>();
     const byDistrictMap = new Map<string, { revenue: number; orders: number }>();
+    const reasonMap = new Map<string, number>();
 
     for (const o of orders) {
       const amount = Number(o.totalAmount);
@@ -91,13 +92,21 @@ router.get('/analytics', async (req, res, next) => {
       const dayEntry = byDayMap.get(day);
       if (dayEntry) { dayEntry.revenue += amount; dayEntry.orders += 1; }
 
-      const p = byProductMap.get(o.product.name) || { revenue: 0, quantity: 0, orders: 0 };
-      p.revenue += amount; p.quantity += o.quantity; p.orders += 1;
-      byProductMap.set(o.product.name, p);
+      // Per-product: each line item counts toward its own product
+      for (const item of o.items) {
+        const p = byProductMap.get(item.product.name) || { revenue: 0, quantity: 0, orders: 0 };
+        p.revenue += Number(item.subtotal); p.quantity += item.quantity; p.orders += 1;
+        byProductMap.set(item.product.name, p);
+      }
 
       const d = byDistrictMap.get(o.district) || { revenue: 0, orders: 0 };
       d.revenue += amount; d.orders += 1;
       byDistrictMap.set(o.district, d);
+
+      if (o.status === 'RETURNED') {
+        const reason = o.returnReason || 'No reason recorded';
+        reasonMap.set(reason, (reasonMap.get(reason) || 0) + 1);
+      }
     }
 
     const totalRevenue = orders.reduce((s: number, o: any) => s + Number(o.totalAmount), 0);
@@ -113,6 +122,7 @@ router.get('/analytics', async (req, res, next) => {
       byDay: [...byDayMap].map(([date, v]) => ({ date, ...v })),
       byProduct: [...byProductMap].map(([name, v]) => ({ name, ...v })).sort((a, b) => b.revenue - a.revenue),
       byDistrict: [...byDistrictMap].map(([district, v]) => ({ district, ...v })).sort((a, b) => b.revenue - a.revenue),
+      returnReasons: [...reasonMap].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count),
     });
   } catch (err) { next(err); }
 });
@@ -133,7 +143,7 @@ router.post('/daily/email', async (req, res, next) => {
     const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
     const orders = await prisma.order.findMany({
       where: { tenantId: req.tenantId, createdAt: { gte: start, lte: end }, status: { not: 'CANCELLED' } },
-      include: { product: { select: { name: true } } },
+      include: { items: { include: { product: { select: { name: true } } } } },
     });
     const revenue = orders.reduce((s: number, o: any) => s + Number(o.totalAmount), 0);
     const lowStock = await prisma.product.findMany({ where: { tenantId: req.tenantId } });
@@ -141,13 +151,14 @@ router.post('/daily/email', async (req, res, next) => {
       .filter((p: { stockQuantity: number; reorderThreshold: number }) => p.stockQuantity <= p.reorderThreshold)
       .map((p: { name: string; stockQuantity: number }) => `${p.name} (${p.stockQuantity} left)`);
 
+    const itemsText = (o: any) => o.items.map((i: any) => `${i.product.name} × ${i.quantity}`).join(', ');
     const lines = [
       `Daily briefing for ${tenant?.businessName || 'your shop'}`,
       '',
       `New orders (24h): ${orders.length}`,
       `Revenue (24h): BDT ${revenue.toFixed(2)}`,
       ...(orders.length
-        ? ['', 'Orders:', ...orders.map((o: any) => `  #${o.orderNumber} — ${o.customerName} — ${o.product.name} × ${o.quantity} — BDT ${Number(o.totalAmount).toFixed(2)} (${o.status})`)]
+        ? ['', 'Orders:', ...orders.map((o: any) => `  #${o.orderNumber} — ${o.customerName} — ${itemsText(o)} — BDT ${Number(o.totalAmount).toFixed(2)} (${o.status})`)]
         : []),
       ...(lowNames.length ? ['', `Low stock: ${lowNames.join(', ')}`] : []),
       '',
@@ -190,7 +201,7 @@ router.get('/settings', async (req, res, next) => {
 // PATCH /api/stats/settings — tenant preferences. Every field is optional;
 // only the ones sent are updated (risk threshold, auto-status messages,
 // business hours + away message for the out-of-hours auto-reply).
-router.patch('/settings', async (req, res, next) => {
+router.patch('/settings', requireOwner, async (req, res, next) => {
   try {
     const data: Record<string, unknown> = {};
 

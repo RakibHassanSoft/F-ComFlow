@@ -14,11 +14,40 @@ import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';
 import { ApiError } from '../lib/errors';
 import { graph } from '../lib/graph';
+import { analyzeAds, AttributionAgg } from '../services/adsAnalysis';
 
 const router = Router();
 router.use(requireAuth);
 
 // ---------------------------------------------------------------- attribution
+
+interface AttributionRow {
+  adId: string; adTitle: string;
+  conversations: number; orders: number; revenue: number; highRisk: number;
+}
+
+// Group ad-tagged conversations + their non-cancelled orders by ad id. Shared
+// by the summary table AND the analysis engine.
+async function computeAttribution(tenantId: string): Promise<Map<string, AttributionRow>> {
+  const conversations = await prisma.conversation.findMany({
+    where: { tenantId, adId: { not: null } },
+    include: { orders: true },
+  });
+  const byAd = new Map<string, AttributionRow>();
+  for (const c of conversations) {
+    const key = c.adId as string;
+    const row = byAd.get(key) ?? { adId: key, adTitle: c.adTitle || key, conversations: 0, orders: 0, revenue: 0, highRisk: 0 };
+    row.conversations++;
+    for (const o of c.orders) {
+      if (o.status === 'CANCELLED') continue;
+      row.orders++;
+      row.revenue += Number(o.totalAmount);
+      if (o.riskLevel === 'HIGH') row.highRisk++;
+    }
+    byAd.set(key, row);
+  }
+  return byAd;
+}
 
 // GET /api/ads/summary — the ad-ROI table, computed mostly from our own DB.
 // Conversations/orders/revenue always come from us; when an ad account is
@@ -26,32 +55,7 @@ router.use(requireAuth);
 // (revenue ÷ spend) — the number Meta's own Ads Manager can't give per order.
 router.get('/summary', async (req, res, next) => {
   try {
-    const conversations = await prisma.conversation.findMany({
-      where: { tenantId: req.tenantId, adId: { not: null } },
-      include: { orders: true },
-    });
-
-    // Group by ad
-    const byAd = new Map<string, {
-      adId: string; adTitle: string;
-      conversations: number; orders: number; revenue: number; highRisk: number;
-    }>();
-
-    for (const c of conversations) {
-      const key = c.adId as string;
-      const row = byAd.get(key) ?? {
-        adId: key, adTitle: c.adTitle || key,
-        conversations: 0, orders: 0, revenue: 0, highRisk: 0,
-      };
-      row.conversations++;
-      for (const o of c.orders) {
-        if (o.status === 'CANCELLED') continue;
-        row.orders++;
-        row.revenue += Number(o.totalAmount);
-        if (o.riskLevel === 'HIGH') row.highRisk++;
-      }
-      byAd.set(key, row);
-    }
+    const byAd = await computeAttribution(req.tenantId);
 
     // Best-effort spend per ad (last 30 days) from the connected account.
     // Never fatal: demo ad ids won't match real ones, so spend is just null.
@@ -198,6 +202,48 @@ router.post('/campaigns/:id/status', async (req, res, next) => {
 
     await graph(`${req.params.id}`, { token: tenant.adsToken, method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `status=${status}` });
     res.json({ ok: true, status });
+  } catch (err) { next(err); }
+});
+
+// POST /api/ads/campaigns/:id/budget  { dailyBudget }  (major currency units)
+// Updates the campaign's daily budget. Meta stores it in minor units (×100).
+// Fails cleanly if the campaign uses ad-set level budgets instead.
+router.post('/campaigns/:id/budget', async (req, res, next) => {
+  try {
+    const dailyBudget = Number(req.body.dailyBudget);
+    if (!Number.isFinite(dailyBudget) || dailyBudget <= 0) throw new ApiError(400, 'dailyBudget must be a positive number');
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: req.tenantId } });
+    if (!tenant?.adsToken) throw new ApiError(422, 'No ad account connected yet');
+
+    const minor = Math.round(dailyBudget * 100);
+    try {
+      await graph(`${req.params.id}`, {
+        token: tenant.adsToken, method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `daily_budget=${minor}`,
+      });
+    } catch (e: any) {
+      throw new ApiError(422, `Couldn't set this campaign's budget (${e.message}). It may use ad-set level budgets — edit those in Ads Manager.`);
+    }
+    res.json({ ok: true, dailyBudget });
+  } catch (err) { next(err); }
+});
+
+// GET /api/ads/analysis — auto-analysis + one-click recommendations.
+// Judges each campaign on REAL ROI (Meta spend vs orders our inbox attributes)
+// and returns scale/pause/trim/fix suggestions with concrete apply actions.
+router.get('/analysis', async (req, res, next) => {
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { id: req.tenantId } });
+    if (!tenant?.adsToken || !tenant.adsAccountId) throw new ApiError(422, 'No ad account connected yet');
+
+    const byAd = await computeAttribution(req.tenantId);
+    const attribution = new Map<string, AttributionAgg>();
+    for (const [adId, r] of byAd) attribution.set(adId, { orders: r.orders, revenue: r.revenue, highRisk: r.highRisk });
+
+    const analysis = await analyzeAds({ adsToken: tenant.adsToken, adsAccountId: tenant.adsAccountId }, attribution);
+    res.json(analysis);
   } catch (err) { next(err); }
 });
 

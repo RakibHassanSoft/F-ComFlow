@@ -14,6 +14,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { normalizeWebhook, ingestInbound } from '../services/channels';
+import { isQueueEnabled, enqueueWebhook } from '../lib/queue';
 
 const router = Router();
 
@@ -58,6 +59,14 @@ router.post('/webhook', (req, res) => {
 
   // Acknowledge INSTANTLY (Meta requires a fast 200), then process.
   res.sendStatus(200);
+
+  // Durable path: hand the raw payload to Redis and let the background worker
+  // (see index.ts) do the heavy lifting. Falls back to inline processing when
+  // no Redis is configured, so behaviour is unchanged without it.
+  if (isQueueEnabled()) {
+    enqueueWebhook('meta', req.body).catch((e) => console.error('[meta] enqueue failed:', e.message));
+    return;
+  }
 
   const messages = normalizeWebhook(req.body);
   for (const m of messages) {

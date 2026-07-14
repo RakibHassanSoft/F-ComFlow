@@ -5,14 +5,17 @@
 //   - the manual "Sync status" button
 // Every change writes the timeline event AND broadcasts over Socket.io, so
 // the Shipping page and order page update on screen without a refresh.
-import { prisma } from '../lib/prisma';
+import { prisma, basePrisma, setTenantGuc } from '../lib/prisma';
 import { emitToTenant } from '../lib/socket';
 import { COURIER_JOURNEY, getAdapter } from './couriers';
 
 // Apply a new courier status to an order. Returns the updated order,
 // or null if nothing changed (dedupe: the same status twice is a no-op).
 export async function applyTrackingUpdate(orderId: string, newStatus: string) {
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: true },
+  });
   if (!order || !order.trackingCode) return null;
   if (order.courierStatus === newStatus) return null; // no change
   if (order.status !== 'DISPATCHED') return null;      // journey already over
@@ -20,20 +23,23 @@ export async function applyTrackingUpdate(orderId: string, newStatus: string) {
   const delivered = newStatus === 'Delivered';
   const returned = newStatus === 'Returned';
 
-  const updated = await prisma.$transaction(async (tx: any) => {
-    // A returned parcel puts the units back in stock (same rule as Phase 4)
+  const updated = await basePrisma.$transaction(async (tx: any) => {
+    await setTenantGuc(tx, order.tenantId); // RLS: scope this transaction to the order's tenant
+    // A returned parcel puts every line's units back in stock (same rule as Phase 4)
     if (returned) {
-      await tx.product.updateMany({
-        where: { id: order.productId, tenantId: order.tenantId },
-        data: { stockQuantity: { increment: order.quantity } },
-      });
+      for (const item of order.items) {
+        await tx.product.updateMany({
+          where: { id: item.productId, tenantId: order.tenantId },
+          data: { stockQuantity: { increment: item.quantity } },
+        });
+      }
     }
     return tx.order.update({
       where: { id: order.id },
       data: {
         courierStatus: newStatus,
         ...(delivered ? { status: 'DELIVERED' } : {}),
-        ...(returned ? { status: 'RETURNED' } : {}),
+        ...(returned ? { status: 'RETURNED', returnReason: 'Courier return' } : {}),
         events: {
           create: {
             tenantId: order.tenantId,
@@ -42,7 +48,7 @@ export async function applyTrackingUpdate(orderId: string, newStatus: string) {
           },
         },
       },
-      include: { product: true },
+      include: { items: { include: { product: true } } },
     });
   });
 

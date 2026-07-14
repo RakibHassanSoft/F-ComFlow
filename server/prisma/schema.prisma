@@ -43,6 +43,7 @@ model Tenant {
   ledgerEntries LedgerEntry[]
   channels      ChannelConnection[]
   templates     Template[]
+  store         Store?
 }
 
 enum Role {
@@ -172,12 +173,37 @@ model Product {
   sku              String
   name             String
   price            Decimal @db.Decimal(10, 2)
+  discountPrice    Decimal? @db.Decimal(10, 2) // optional sale price (must be < price)
+  imageUrl         String? // legacy single photo (kept for backwards compatibility)
+  images           String[] @default([]) // up to 3 Cloudinary photos
   stockQuantity    Int     @default(0)
   reorderThreshold Int     @default(5)
   lowStockAlerted  Boolean @default(false) // dedupe: one alert per threshold crossing
-  orders           Order[]
+
+  // Public storefront listing (10 BDT fee per listed product, charged once)
+  listedInStore    Boolean @default(false)
+  listingCharged   Boolean @default(false)
+
+  orderItems       OrderItem[]
 
   @@unique([tenantId, sku])
+}
+
+// ---------- Public storefront (fcom.com/<slug>) ----------
+// One store per tenant. 500 BDT one-time setup fee (paid via SSLCOMMERZ),
+// then 10 BDT per listed product — no recurring fees. The store is reachable
+// only by its link; there is no public directory.
+model Store {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  slug        String   @unique // fcom.com/<slug>
+  name        String
+  description String?
+  published   Boolean  @default(false) // owner can pause the store any time
+  setupPaid   Boolean  @default(false) // 500 BDT setup fee settled?
+  setupTxnId  String?  // gateway transaction id of the setup payment
+  createdAt   DateTime @default(now())
 }
 
 enum OrderStatus {
@@ -209,11 +235,10 @@ model Order {
   address        String
   district       String
 
-  productId      String
-  product        Product       @relation(fields: [productId], references: [id])
-  quantity       Int           @default(1)
-  unitPrice      Decimal       @db.Decimal(10, 2)
-  totalAmount    Decimal       @db.Decimal(10, 2)
+  // Line items: an order can contain multiple products (see OrderItem)
+  items          OrderItem[]
+  deliveryFee    Decimal       @default(0) @db.Decimal(10, 2) // set at courier booking
+  totalAmount    Decimal       @db.Decimal(10, 2) // sum of item subtotals + deliveryFee
 
   customerId     String?
   customer       Customer?     @relation(fields: [customerId], references: [id])
@@ -224,10 +249,13 @@ model Order {
   courierName    String?
   trackingCode   String?
   courierStatus  String?
+  returnReason   String? // why the parcel came back (feeds analytics)
 
   // Phase 7: risk
   riskScore      Int?
   riskLevel      String? // LOW | MEDIUM | HIGH
+
+  source         String? // e.g. "STORE" = placed by a customer on the public storefront
 
   createdAt      DateTime      @default(now())
   events         OrderEvent[]
@@ -235,6 +263,23 @@ model Order {
   ledgerEntries  LedgerEntry[]
 
   @@unique([tenantId, orderNumber])
+}
+
+// One line of an order: product × quantity at the price it was sold for.
+// Prices are copied onto the item at order time, so later catalog price
+// changes never rewrite history.
+model OrderItem {
+  id        String  @id @default(cuid())
+  tenantId  String
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
+
+  @@index([tenantId, orderId])
 }
 
 // Timeline of everything that happened to an order

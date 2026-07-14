@@ -3,6 +3,7 @@
 // - Short-lived access token + long-lived refresh token
 // - Both stored in httpOnly cookies (JavaScript can't steal them)
 import { Router } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
@@ -115,6 +116,70 @@ router.get('/me', requireAuth, async (req, res, next) => {
     res.json({
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
       tenant: { id: user.tenant.id, businessName: user.tenant.businessName, riskThreshold: user.tenant.riskThreshold },
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/auth/google — "Sign in with Google".
+// The client sends the ID token (credential) from Google Identity Services;
+// we verify it against Google's tokeninfo endpoint (no extra dependency),
+// then log the user in — creating a fresh store on their first visit.
+router.post('/google', rateLimit(10, 60_000), async (req, res, next) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Missing Google credential' });
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.status(422).json({ error: 'Google login is not configured on this server' });
+    }
+
+    // Verify the token with Google (checks signature + expiry server-side)
+    const verify = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+      { signal: AbortSignal.timeout(8_000) }
+    );
+    if (!verify.ok) return res.status(401).json({ error: 'Google token is invalid or expired' });
+    const info: any = await verify.json();
+
+    // The token must have been issued for OUR app, to a verified email
+    if (info.aud !== process.env.GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ error: 'Google token was issued for a different app' });
+    }
+    if (info.email_verified !== 'true' && info.email_verified !== true) {
+      return res.status(401).json({ error: 'Google account email is not verified' });
+    }
+
+    const email = String(info.email).toLowerCase();
+    const name = info.name || info.given_name || email.split('@')[0];
+
+    // Existing user -> log in. New user -> create their store (like /register).
+    let user = await prisma.user.findUnique({ where: { email }, include: { tenant: true } });
+    if (!user) {
+      const tenant = await prisma.tenant.create({
+        data: {
+          businessName: `${info.given_name || name}'s Shop`,
+          users: {
+            create: {
+              name,
+              email,
+              // No password for Google accounts — store an unusable random hash
+              passwordHash: await bcrypt.hash(crypto.randomUUID() + Date.now(), 10),
+              role: 'OWNER',
+            },
+          },
+        },
+        include: { users: { include: { tenant: true } } },
+      });
+      user = { ...tenant.users[0], tenant };
+      console.log(`[audit] google signup: ${email} (new tenant ${tenant.id})`);
+    } else {
+      console.log(`[audit] google login: ${email} (tenant ${user.tenantId})`);
+    }
+
+    const token = setAuthCookies(res, { userId: user.id, tenantId: user.tenantId, role: user.role });
+    res.json({
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      tenant: { id: user.tenant.id, businessName: user.tenant.businessName },
+      token,
     });
   } catch (err) { next(err); }
 });

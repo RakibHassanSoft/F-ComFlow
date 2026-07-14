@@ -7,7 +7,7 @@
 // endpoint has the same shape a real IPN handler would.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireOwner } from '../middleware/auth';
 import { ApiError } from '../lib/errors';
 import { emitToTenant } from '../lib/socket';
 import { settlePayment, round2 } from '../services/payments';
@@ -58,12 +58,25 @@ router.post('/invoices', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/payments/invoices — every invoice across all orders (newest first).
+// Powers the Invoices page: one place to see what's pending vs paid.
+router.get('/invoices', async (req, res, next) => {
+  try {
+    const invoices = await prisma.invoice.findMany({
+      where: { tenantId: req.tenantId },
+      include: { order: { select: { id: true, orderNumber: true, customerName: true, status: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(invoices);
+  } catch (err) { next(err); }
+});
+
 // GET /api/payments/invoices/:id — data for the QR invoice page
 router.get('/invoices/:id', async (req, res, next) => {
   try {
     const invoice = await prisma.invoice.findFirst({
       where: { id: req.params.id, tenantId: req.tenantId },
-      include: { order: { include: { product: true } } },
+      include: { order: { include: { items: { include: { product: true } } } } },
     });
     if (!invoice) throw new ApiError(404, 'Invoice not found');
     res.json(invoice);
@@ -96,7 +109,8 @@ router.post('/invoices/:id/pay', async (req, res, next) => {
 
 // GET /api/payments/ledger?from=2026-01-01&to=2026-01-31 — settlement list +
 // running balance. Optional from/to filter (inclusive, by settlement date).
-router.get('/ledger', async (req, res, next) => {
+// OWNER only: the money view is not for agents.
+router.get('/ledger', requireOwner, async (req, res, next) => {
   try {
     const from = req.query.from ? new Date(String(req.query.from)) : null;
     const to = req.query.to ? new Date(`${String(req.query.to)}T23:59:59.999`) : null;
@@ -118,8 +132,8 @@ router.get('/ledger', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/payments/ledger/export — CSV download
-router.get('/ledger/export', async (req, res, next) => {
+// GET /api/payments/ledger/export — CSV download (OWNER only)
+router.get('/ledger/export', requireOwner, async (req, res, next) => {
   try {
     const entries = await prisma.ledgerEntry.findMany({
       where: { tenantId: req.tenantId },

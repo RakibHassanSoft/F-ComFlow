@@ -11,6 +11,7 @@ async function main() {
   await prisma.ledgerEntry.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.orderEvent.deleteMany();
+  await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
@@ -84,13 +85,18 @@ async function main() {
   // --- Orders in various states for a full-looking dashboard ---
   const customer3 = await prisma.customer.create({ data: { tenantId, name: 'Sajid Hasan', phone: '01911223344' } });
 
-  // Delivered + paid order (with ledger entry)
+  // Delivered + paid order (with ledger entry) — multi-item order
   const order1 = await prisma.order.create({
     data: {
       tenantId, orderNumber: 1001, status: 'DELIVERED', paymentStatus: 'PAID',
       customerName: 'Sajid Hasan', phone: '01911223344',
       address: 'Flat 3B, GEC Circle, Nasirabad', district: 'Chattogram',
-      productId: products[0].id, quantity: 2, unitPrice: 550, totalAmount: 1100,
+      items: {
+        create: [
+          { tenantId, productId: products[0].id, quantity: 2, unitPrice: 550, subtotal: 1100 },
+        ],
+      },
+      totalAmount: 1100,
       customerId: customer3.id, riskScore: 22, riskLevel: 'LOW',
       courierName: 'Pathao', trackingCode: 'PTH-1001-DEMO01', courierStatus: 'Delivered',
       events: {
@@ -121,7 +127,13 @@ async function main() {
       tenantId, orderNumber: 1002, status: 'CONFIRMED', paymentStatus: 'UNPAID',
       customerName: 'Nusrat Jahan', phone: '01655667788',
       address: 'House 45, Zindabazar Point', district: 'Sylhet',
-      productId: products[3].id, quantity: 1, unitPrice: 850, totalAmount: 850,
+      items: {
+        create: [
+          { tenantId, productId: products[3].id, quantity: 1, unitPrice: 850, subtotal: 850 },
+          { tenantId, productId: products[0].id, quantity: 1, unitPrice: 550, subtotal: 550 },
+        ],
+      },
+      totalAmount: 1400,
       riskScore: 41, riskLevel: 'MEDIUM',
       events: {
         create: [
@@ -139,7 +151,12 @@ async function main() {
       tenantId, orderNumber: 1003, status: 'CONFIRMED', paymentStatus: 'UNPAID',
       customerName: 'Mitu Rani', phone: '01344556677',
       address: 'College para', district: 'Rangpur',
-      productId: products[4].id, quantity: 1, unitPrice: 2100, totalAmount: 2100,
+      items: {
+        create: [
+          { tenantId, productId: products[4].id, quantity: 1, unitPrice: 2100, subtotal: 2100 },
+        ],
+      },
+      totalAmount: 2100,
       riskScore: 72, riskLevel: 'HIGH',
       events: {
         create: [

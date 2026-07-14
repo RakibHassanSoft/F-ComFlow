@@ -123,7 +123,7 @@ router.get('/conversations/:id/customer', async (req, res, next) => {
       ? await prisma.order.findMany({
           where: { tenantId: req.tenantId, customerId: conversation.customerId },
           orderBy: { createdAt: 'desc' },
-          include: { product: true },
+          include: { items: { include: { product: true } } },
         })
       : [];
 

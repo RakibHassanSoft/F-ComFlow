@@ -14,6 +14,7 @@
     "db:check": "node scripts/check-db.js",
     "sslcz:check": "node scripts/check-sslcz.js",
     "couriers:check": "node scripts/check-couriers.js",
+    "meta:check": "node scripts/check-meta.js",
     "test": "node --import tsx --test \"src/__tests__/**/*.test.ts\""
   },
   "prisma": {

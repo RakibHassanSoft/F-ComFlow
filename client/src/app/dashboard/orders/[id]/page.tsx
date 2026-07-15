@@ -15,16 +15,25 @@ import { Badge, Button, Card, Loading, Modal, PageHeader } from '@/components/ui
 import { QrMock } from '@/components/QrMock';
 import { useSession } from '@/lib/session';
 
+interface OrderItem {
+  id: string; quantity: number; unitPrice: string; subtotal: string;
+  product: { id: string; name: string; sku: string; imageUrl: string | null };
+}
 interface OrderDetail {
   id: string; orderNumber: number; status: string; paymentStatus: string;
   customerName: string; phone: string; address: string; district: string;
-  quantity: number; unitPrice: string; totalAmount: string;
+  totalAmount: string; deliveryFee: string; returnReason: string | null;
   courierName: string | null; trackingCode: string | null; courierStatus: string | null;
   riskScore: number | null; riskLevel: string | null; createdAt: string;
-  product: { id: string; name: string; sku: string };
+  items: OrderItem[];
   events: { id: string; type: string; note: string; createdAt: string }[];
   invoices: { id: string; type: string; status: string; amount: string; transactionId: string | null }[];
 }
+
+const RETURN_REASONS = [
+  'Customer refused delivery', 'Wrong/incomplete address', 'Customer unreachable',
+  'Damaged in transit', 'Customer changed mind', 'Other',
+];
 interface Quote { courier: string; price: number; etaDays: number; available: boolean }
 
 export default function OrderDetailPage() {
@@ -67,8 +76,16 @@ export default function OrderDetailPage() {
 
   const confirm = () => run('confirm', () => api.post(`/orders/${id}/confirm`));
   const cancel = () => run('cancel', () => api.post(`/orders/${id}/cancel`));
-  const markReturned = () => run('return', () => api.post(`/orders/${id}/return`));
   const syncCourier = () => run('sync', () => api.post(`/couriers/sync/${id}`));
+
+  // Return with a reason — the reason feeds the Analytics page
+  const [showReturn, setShowReturn] = useState(false);
+  const [returnReason, setReturnReason] = useState(RETURN_REASONS[0]);
+  const markReturned = () =>
+    run('return', async () => {
+      await api.post(`/orders/${id}/return`, { reason: returnReason });
+      setShowReturn(false);
+    });
 
   async function openBooking() {
     setShowBooking(true);
@@ -173,13 +190,47 @@ export default function OrderDetailPage() {
             <div><dt className="text-slate-400">Customer</dt><dd className="font-medium">{order.customerName}</dd></div>
             <div><dt className="text-slate-400">Phone</dt><dd className="font-medium">{order.phone}</dd></div>
             <div><dt className="text-slate-400">Address</dt><dd className="font-medium">{order.address}, {order.district}</dd></div>
-            <div><dt className="text-slate-400">Item</dt><dd className="font-medium">{order.product.name} ({order.product.sku}) × {order.quantity}</dd></div>
-            <div><dt className="text-slate-400">Total</dt><dd className="text-base font-bold">{money(order.totalAmount)}</dd></div>
-            {order.riskScore != null && (
-              <div><dt className="text-slate-400">COD risk</dt>
-                <dd className="flex items-center gap-2 font-medium"><Badge label={order.riskLevel || ''} /> {order.riskScore}%</dd></div>
-            )}
           </dl>
+
+          {/* Line items */}
+          <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
+            {order.items.map((it) => (
+              <div key={it.id} className="flex items-center gap-3 text-sm">
+                {it.product.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={it.product.imageUrl} alt="" className="h-9 w-9 rounded-lg border border-slate-200 object-cover" />
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">📦</div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{it.product.name} <span className="text-slate-400">× {it.quantity}</span></p>
+                  <p className="text-xs text-slate-400">{it.product.sku} · {money(it.unitPrice)} each</p>
+                </div>
+                <span className="font-medium">{money(it.subtotal)}</span>
+              </div>
+            ))}
+            {Number(order.deliveryFee) > 0 && (
+              <div className="flex items-center justify-between text-sm text-slate-500">
+                <span>Delivery fee ({order.courierName || 'courier'})</span>
+                <span>{money(order.deliveryFee)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between border-t border-slate-100 pt-2">
+              <span className="text-sm text-slate-400">Total</span>
+              <span className="text-base font-bold">{money(order.totalAmount)}</span>
+            </div>
+            {order.riskScore != null && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">COD risk</span>
+                <span className="flex items-center gap-2 font-medium"><Badge label={order.riskLevel || ''} /> {order.riskScore}%</span>
+              </div>
+            )}
+            {order.returnReason && (
+              <div className="rounded-lg bg-orange-50 px-3 py-2 text-sm text-orange-700">
+                Return reason: {order.returnReason}
+              </div>
+            )}
+          </div>
         </Card>
 
         {/* ---------- Actions ---------- */}
@@ -200,7 +251,7 @@ export default function OrderDetailPage() {
                 <Link href={`/dashboard/orders/${order.id}/label`}>
                   <Button variant="secondary"><Printer size={15} /> Print label</Button>
                 </Link>
-                <Button variant="danger" onClick={markReturned} loading={busy === 'return'}>Mark returned</Button>
+                <Button variant="danger" onClick={() => setShowReturn(true)}>Mark returned</Button>
               </>
             )}
             {['DRAFT', 'CONFIRMED'].includes(order.status) && (
@@ -290,6 +341,28 @@ export default function OrderDetailPage() {
             </p>
           </div>
         )}
+      </Modal>
+
+      {/* ---------- Return with reason ---------- */}
+      <Modal title="Mark order as returned" open={showReturn} onClose={() => setShowReturn(false)}>
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">
+            Stock goes back automatically. The reason feeds your Analytics so you can see <i>why</i> parcels come back.
+          </p>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Reason</span>
+            <select
+              value={returnReason}
+              onChange={(e) => setReturnReason(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+            >
+              {RETURN_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+          <Button variant="danger" className="w-full" onClick={markReturned} loading={busy === 'return'}>
+            Confirm return
+          </Button>
+        </div>
       </Modal>
 
       {/* ---------- Phase 6: QR invoice modal ---------- */}

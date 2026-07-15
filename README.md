@@ -381,20 +381,146 @@ F_comFlow/
 
 ---
 
-## ৭. কীভাবে চালাবো?
+## ৭. ইনস্টল ও রান করার সম্পূর্ণ নির্দেশনা (Installation & Run Guide)
 
-**সবচেয়ে সহজ (Docker):**
+### ৭.১ আগে যা লাগবে (Prerequisites)
 
-```
+| সফটওয়্যার | ভার্সন | কোথা থেকে | কেন লাগবে |
+|---|---|---|---|
+| **Docker Desktop** | সর্বশেষ | docker.com | Option A-র জন্য (এক কমান্ডে সব) |
+| **Node.js** | 20+ | nodejs.org | Option B-র জন্য (ডেভেলপার মোড) |
+| **Python** | 3.11+ | python.org | Option B-তে AI সার্ভিস চালাতে |
+| **Git** | যেকোনো | git-scm.com | কোড ক্লোন করতে |
+
+যাচাই করুন: `docker -v` · `node -v` · `python --version`
+
+---
+
+### ৭.২ Option A — Docker দিয়ে (সবচেয়ে সহজ, ৩টা কমান্ড)
+
+শুধু Docker Desktop চালু থাকলেই হবে — Node/Python কিছুই লাগবে না।
+
+```bash
+# 1. কোড নামান আর ফোল্ডারে ঢুকুন
+git clone <your-repo-url> fcomflow
+cd fcomflow
+
+# 2. env ফাইল বানান (Windows: copy, Mac/Linux: cp)
 copy .env.example .env
+
+# 3. পুরো সিস্টেম বিল্ড + চালু (প্রথমবার ৫-১০ মিনিট লাগে)
 docker compose up -d --build
+
+# 4. ডেমো ডাটা লোড করুন (একবারই)
 docker compose exec server npm run db:seed
 ```
 
-তারপর ব্রাউজারে `http://localhost:3000` → লগইন: `demo@fcomflow.com / demo1234`
+**ব্যাস!** ব্রাউজারে খুলুন → `http://localhost:3000`
+লগইন: **demo@fcomflow.com** / **demo1234**
 
-**ডেভেলপার মোড:** README.md-তে ৪টা টার্মিনালের নির্দেশনা আছে।
-**ইন্টারনেট ছাড়া ডেমো:** `presentation/index.html` ডাবল-ক্লিক করলেই চলে।
+ভেতরে যা যা চালু হলো:
+
+| সার্ভিস | ঠিকানা | কাজ |
+|---|---|---|
+| Dashboard | http://localhost:3000 | মার্চেন্ট ড্যাশবোর্ড |
+| API | http://localhost:4000/api/health | সব লজিক + ডাটাবেস |
+| AI | http://localhost:8000/api/health | পার্সার + রিস্ক মডেল (বিল্ডের সময়ই ট্রেইন হয়) |
+| PostgreSQL | localhost:5432 | ডাটাবেস |
+
+দরকারি Docker কমান্ড:
+
+```bash
+docker compose logs -f server    # লাইভ লগ দেখা
+docker compose restart server    # একটা সার্ভিস রিস্টার্ট
+docker compose down              # সব বন্ধ (ডাটা থাকবে)
+docker compose down -v           # সব বন্ধ + ডাটাবেস মুছে ফেলা
+git pull && docker compose up -d --build   # আপডেটের পর নতুন করে চালু
+```
+
+---
+
+### ৭.৩ Option B — ডেভেলপার মোড (কোড বদলে সাথে সাথে দেখতে)
+
+৪টা টার্মিনাল লাগবে। ডাটাবেসটা Docker-এ, বাকি সব সরাসরি:
+
+```bash
+# টার্মিনাল ০: শুধু ডাটাবেস
+docker compose up -d postgres
+```
+
+```bash
+# টার্মিনাল ১: API সার্ভার
+cd server
+copy .env.example .env
+npm install
+npx prisma generate         # ডাটাবেস ক্লায়েন্ট তৈরি
+npx prisma db push          # টেবিলগুলো তৈরি
+npm run db:seed             # ডেমো ডাটা
+npm run dev                 # → http://localhost:4000
+```
+
+```bash
+# টার্মিনাল ২: AI সার্ভিস (ঐচ্ছিক — না চালালেও সব কাজ করে)
+cd ai
+copy .env.example .env
+pip install -r requirements.txt
+python train/train_model.py           # রিস্ক মডেল ট্রেইন (~১০ সেকেন্ড)
+uvicorn app.main:app --port 8000 --reload
+```
+
+```bash
+# টার্মিনাল ৩: ড্যাশবোর্ড
+cd client
+copy .env.example .env.local
+npm install
+npm run dev                 # → http://localhost:3000
+```
+
+---
+
+### ৭.৪ সব ঠিকঠাক চলছে কি না যাচাই (Verification)
+
+```bash
+curl http://localhost:4000/api/health    # → {"status":"ok",...}
+curl http://localhost:8000/api/health    # → risk_model.engine: "ml"
+cd server && npm run db:check            # ডাটাবেস হেলথ রিপোর্ট (সব ✓ হতে হবে)
+cd server && npm test                    # ১৩/১৩ টেস্ট পাস
+```
+
+তারপর ব্রাউজারে ৫ মিনিটের ডেমো পথ: **Inbox → Simulate message → Extract Order →
+Confirm (রিস্ক স্কোর) → Book courier → QR invoice → Simulate payment → Payments লেজার।**
+
+---
+
+### ৭.৫ ঐচ্ছিক ইন্টিগ্রেশন চালু করতে (সবগুলোই ছাড়া ডেমো চলে)
+
+`.env` ফাইলে যোগ করুন (কোনটা কোথা থেকে পাবেন `.env.example`-এ লেখা আছে):
+
+| ফিচার | env ভেরিয়েবল | উৎস |
+|---|---|---|
+| Google লগইন | `GOOGLE_CLIENT_ID` | console.cloud.google.com (ফ্রি) |
+| SSLCOMMERZ পেমেন্ট | `SSLCZ_STORE_ID`, `SSLCZ_STORE_PASSWD` | developer.sslcommerz.com (ফ্রি স্যান্ডবক্স) |
+| bKash পেমেন্ট | `BKASH_*` (৪টা) | developer.bka.sh (ফ্রি স্যান্ডবক্স) |
+| Gemini AI পার্সিং | `GEMINI_API_KEY` | aistudio.google.com (ফ্রি) |
+| Telegram/Viber চ্যানেল | `PUBLIC_API_URL` + বট টোকেন | @BotFather / partners.viber.com |
+| Messenger/WhatsApp | `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` | developers.facebook.com |
+
+env বদলালে: Docker হলে `docker compose up -d --build`, ডেভ মোডে সার্ভার রিস্টার্ট।
+
+---
+
+### ৭.৬ সাধারণ সমস্যা ও সমাধান (Troubleshooting)
+
+| সমস্যা | সমাধান |
+|---|---|
+| `port is already allocated` | ৩০০০/৪০০০/৫৪৩২/৮০০০ পোর্টে অন্য কিছু চলছে — সেটা বন্ধ করুন |
+| লগইনে `Invalid email or password` | seed চালাননি — `docker compose exec server npm run db:seed` |
+| `db:migrate can't connect` | PostgreSQL চলছে তো? `docker compose up -d postgres` |
+| Prisma-র `does not exist` টাইপ এরর | `npx prisma generate && npx prisma db push` চালান |
+| ছবি/লাইভ আপডেট আসছে না | ব্রাউজার রিফ্রেশ করুন; API টার্মিনালে এরর দেখুন |
+| Docker বিল্ড খুব ধীর | প্রথমবারই ধীর; পরেরবার ক্যাশ থেকে দ্রুত হয় |
+
+**ইন্টারনেট ছাড়া ডেমো:** `presentation/index.html` ডাবল-ক্লিক করলেই পুরো ট্যুর চলে — কোনো ইনস্টলই লাগে না।
 
 ---
 

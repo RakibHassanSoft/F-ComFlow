@@ -66,10 +66,18 @@ export default function ReceiptPage() {
 
           <table className="w-full border-t-2 border-dashed border-slate-300 pt-2 text-sm">
             <tbody>
-              <tr>
-                <td className="pt-3">{order.product.name} × {order.quantity}</td>
-                <td className="pt-3 text-right font-medium">{money(order.totalAmount)}</td>
-              </tr>
+              {order.items.map((it: any) => (
+                <tr key={it.id}>
+                  <td className="pt-3">{it.product.name} × {it.quantity}</td>
+                  <td className="pt-3 text-right font-medium">{money(it.subtotal)}</td>
+                </tr>
+              ))}
+              {Number(order.deliveryFee) > 0 && (
+                <tr className="text-slate-600">
+                  <td className="pt-2">Delivery fee</td>
+                  <td className="pt-2 text-right">{money(order.deliveryFee)}</td>
+                </tr>
+              )}
               {paid.map((i) => (
                 <tr key={i.id} className="text-slate-600">
                   <td className="pt-2">

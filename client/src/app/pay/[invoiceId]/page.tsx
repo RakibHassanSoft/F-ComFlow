@@ -17,6 +17,7 @@ interface PayInfo {
   amount: number;
   status: 'PENDING' | 'PAID';
   bkashEnabled?: boolean;
+  sslczEnabled?: boolean;
 }
 
 export default function PayPage() {
@@ -33,12 +34,13 @@ export default function PayPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // bKash redirects back with ?bkash=success|failed|cancelled (read client-side
-  // to avoid the useSearchParams/Suspense requirement at build time)
+  // Gateways redirect back with ?bkash=… or ?gateway=… = success|failed|cancelled
+  // (read client-side to avoid the useSearchParams/Suspense requirement at build time)
   useEffect(() => {
-    const result = new URLSearchParams(window.location.search).get('bkash');
-    if (result === 'failed') setError('bKash payment failed — please try again.');
-    if (result === 'cancelled') setError('bKash payment was cancelled.');
+    const qs = new URLSearchParams(window.location.search);
+    const result = qs.get('bkash') || qs.get('gateway');
+    if (result === 'failed') setError('Payment failed — please try again.');
+    if (result === 'cancelled') setError('Payment was cancelled.');
   }, []);
 
   async function pay() {
@@ -60,6 +62,20 @@ export default function PayPage() {
     try {
       const { bkashURL } = await api.post(`/pay/${invoiceId}/bkash`);
       window.location.href = bkashURL;
+    } catch (e: any) {
+      setError(e.message);
+      setPaying(false);
+    }
+  }
+
+  // Real SSLCOMMERZ hosted checkout: one page covers cards, bKash, Nagad,
+  // Rocket and net banking. Server creates the session, we redirect.
+  async function payWithSslcz() {
+    setPaying(true);
+    setError('');
+    try {
+      const { gatewayURL } = await api.post(`/pay/${invoiceId}/sslcommerz`);
+      window.location.href = gatewayURL;
     } catch (e: any) {
       setError(e.message);
       setPaying(false);
@@ -91,6 +107,15 @@ export default function PayPage() {
               {info.type === 'ADVANCE' ? '20% advance booking fee' : 'Full payment'}
             </p>
             {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+            {info.sslczEnabled && (
+              <button
+                onClick={payWithSslcz}
+                disabled={paying}
+                className="mb-2 w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {paying ? 'Opening gateway…' : 'Pay with Card / bKash / Nagad (SSLCOMMERZ)'}
+              </button>
+            )}
             {info.bkashEnabled && (
               <button
                 onClick={payWithBkash}
@@ -105,10 +130,12 @@ export default function PayPage() {
               disabled={paying}
               className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
             >
-              {paying ? 'Processing…' : `Pay ${money(info.amount)}${info.bkashEnabled ? ' (sandbox wallet)' : ''}`}
+              {paying ? 'Processing…' : `Pay ${money(info.amount)}${info.bkashEnabled || info.sslczEnabled ? ' (demo wallet)' : ''}`}
             </button>
             <p className="mt-3 text-xs text-slate-400">
-              {info.bkashEnabled ? 'bKash sandbox checkout — no real money moves.' : 'Sandbox payment — bKash / Nagad / card in production.'}
+              {info.sslczEnabled || info.bkashEnabled
+                ? 'Sandbox gateways — no real money moves.'
+                : 'Sandbox payment — bKash / Nagad / card in production.'}
             </p>
           </div>
         )}

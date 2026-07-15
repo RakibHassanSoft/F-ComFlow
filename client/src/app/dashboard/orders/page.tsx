@@ -1,27 +1,38 @@
 // Phase 4: Orders dashboard — filterable, searchable list with status & risk
-// badges, plus bulk confirm/cancel over the selected rows.
+// badges, bulk confirm/cancel, and a manual "New order" form (phone/walk-in
+// orders that never came through a chat).
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Download, Search, CheckCircle2, XCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ShoppingBag, Download, Search, CheckCircle2, XCircle, Plus, Trash2 } from 'lucide-react';
 import { api, API_BASE } from '@/lib/api';
 import { money, timeAgo } from '@/lib/format';
-import { Badge, Button, Card, EmptyState, Loading, PageHeader } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, Field, Loading, Modal, PageHeader } from '@/components/ui';
 
+interface Item { id: string; quantity: number; product: { name: string } }
 interface Order {
   id: string; orderNumber: number; status: string; paymentStatus: string;
-  customerName: string; district: string; quantity: number; totalAmount: string;
+  customerName: string; district: string; totalAmount: string;
   riskScore: number | null; riskLevel: string | null; createdAt: string;
-  product: { name: string };
+  items: Item[];
 }
+interface Product { id: string; name: string; price: string; stockQuantity: number }
 
 const FILTERS = ['ALL', 'DRAFT', 'CONFIRMED', 'DISPATCHED', 'DELIVERED', 'RETURNED', 'CANCELLED'];
 
+function itemsSummary(items: Item[]): string {
+  if (items.length === 0) return '—';
+  const first = `${items[0].product.name} × ${items[0].quantity}`;
+  return items.length > 1 ? `${first} +${items.length - 1} more` : first;
+}
+
 export default function OrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [filter, setFilter] = useState('ALL');
   const [q, setQ] = useState('');
-  const [search, setSearch] = useState(''); // debounced value actually sent
+  const [search, setSearch] = useState('');
   const [exporting, setExporting] = useState(false);
 
   // Bulk selection
@@ -29,7 +40,14 @@ export default function OrdersPage() {
   const [bulkBusy, setBulkBusy] = useState('');
   const [bulkResult, setBulkResult] = useState('');
 
-  // Debounce the search box so we don't query on every keystroke
+  // Manual "New order" form
+  const [showNew, setShowNew] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [form, setForm] = useState({ customerName: '', phone: '', address: '', district: '' });
+  const [lines, setLines] = useState<{ productId: string; quantity: number }[]>([{ productId: '', quantity: 1 }]);
+  const [formError, setFormError] = useState('');
+  const [creating, setCreating] = useState(false);
+
   useEffect(() => {
     const t = setTimeout(() => setSearch(q.trim()), 300);
     return () => clearTimeout(t);
@@ -44,6 +62,7 @@ export default function OrdersPage() {
   }, [filter, search]);
 
   useEffect(() => { setSelected(new Set()); load(); }, [load]);
+  useEffect(() => { api.get('/products').then(setProducts).catch(() => {}); }, []);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -53,8 +72,6 @@ export default function OrdersPage() {
     });
   }
 
-  // Bulk actions reuse the existing per-order endpoints — the server's state
-  // machine still rejects any illegal transition individually.
   async function bulk(action: 'confirm' | 'cancel') {
     if (selected.size === 0) return;
     setBulkBusy(action);
@@ -70,7 +87,6 @@ export default function OrdersPage() {
     load();
   }
 
-  // Download the CSV through an authenticated fetch (cookies), then save it.
   async function exportCsv() {
     setExporting(true);
     try {
@@ -88,6 +104,31 @@ export default function OrdersPage() {
     } finally { setExporting(false); }
   }
 
+  // ----- Manual order creation -----
+  function openNew() {
+    setForm({ customerName: '', phone: '', address: '', district: '' });
+    setLines([{ productId: '', quantity: 1 }]);
+    setFormError('');
+    setShowNew(true);
+  }
+  const validLines = lines.filter((l) => l.productId && l.quantity >= 1);
+  const draftTotal = validLines.reduce((s, l) => {
+    const p = products.find((p) => p.id === l.productId);
+    return s + (p ? Number(p.price) * l.quantity : 0);
+  }, 0);
+
+  async function createOrder() {
+    setCreating(true);
+    setFormError('');
+    try {
+      const order = await api.post('/orders', { ...form, items: validLines });
+      router.push(`/dashboard/orders/${order.id}`);
+    } catch (e: any) {
+      setFormError(e.message);
+      setCreating(false);
+    }
+  }
+
   const allVisible = orders ?? [];
   const allChecked = allVisible.length > 0 && allVisible.every((o) => selected.has(o.id));
 
@@ -97,9 +138,12 @@ export default function OrdersPage() {
         title="Orders"
         subtitle="Every order, from draft to delivered."
         action={
-          <Button variant="secondary" onClick={exportCsv} loading={exporting}>
-            <Download size={15} /> Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={exportCsv} loading={exporting}>
+              <Download size={15} /> Export CSV
+            </Button>
+            <Button onClick={openNew}><Plus size={15} /> New order</Button>
+          </div>
         }
       />
 
@@ -148,7 +192,7 @@ export default function OrdersPage() {
       ) : orders.length === 0 ? (
         <Card>
           <EmptyState icon={<ShoppingBag size={22} />} title={search ? 'No orders match your search' : 'No orders here'}
-            hint={search ? 'Try a different name, phone number or tracking code.' : 'Extract an order from an inbox conversation to get started.'} />
+            hint={search ? 'Try a different name, phone number or tracking code.' : 'Extract an order from an inbox conversation, or create one manually.'} />
         </Card>
       ) : (
         <Card className="overflow-x-auto">
@@ -165,7 +209,7 @@ export default function OrdersPage() {
                 </th>
                 <th className="px-5 py-3">Order</th>
                 <th className="px-5 py-3">Customer</th>
-                <th className="px-5 py-3">Product</th>
+                <th className="px-5 py-3">Items</th>
                 <th className="px-5 py-3">Total</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3">Payment</th>
@@ -193,7 +237,7 @@ export default function OrdersPage() {
                     <p className="font-medium">{o.customerName}</p>
                     <p className="text-xs text-slate-400">{o.district}</p>
                   </td>
-                  <td className="px-5 py-3">{o.product.name} × {o.quantity}</td>
+                  <td className="px-5 py-3">{itemsSummary(o.items)}</td>
                   <td className="px-5 py-3 font-medium">{money(o.totalAmount)}</td>
                   <td className="px-5 py-3"><Badge label={o.status} /></td>
                   <td className="px-5 py-3"><Badge label={o.paymentStatus} /></td>
@@ -214,6 +258,61 @@ export default function OrdersPage() {
           </table>
         </Card>
       )}
+
+      {/* ---------- Manual "New order" modal ---------- */}
+      <Modal title="New order (manual entry)" open={showNew} onClose={() => setShowNew(false)}>
+        <div className="space-y-3">
+          <Field label="Customer name" value={form.customerName} onChange={(v) => setForm({ ...form, customerName: v })} placeholder="e.g. Rahim Uddin" />
+          <Field label="Phone (01XXXXXXXXX)" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="01712345678" />
+          <Field label="Address" value={form.address} onChange={(v) => setForm({ ...form, address: v })} placeholder="House, road, area" />
+          <Field label="District" value={form.district} onChange={(v) => setForm({ ...form, district: v })} placeholder="e.g. Dhaka" />
+
+          <div>
+            <span className="mb-1 block text-sm font-medium text-slate-700">Items</span>
+            <div className="space-y-2">
+              {lines.map((line, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <select
+                    value={line.productId}
+                    onChange={(e) => setLines(lines.map((l, j) => j === i ? { ...l, productId: e.target.value } : l))}
+                    className="flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-indigo-400"
+                  >
+                    <option value="">Select product…</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name} — {money(p.price)} ({p.stockQuantity} in stock)</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number" min={1} value={line.quantity}
+                    onChange={(e) => setLines(lines.map((l, j) => j === i ? { ...l, quantity: Math.max(1, Number(e.target.value) || 1) } : l))}
+                    className="w-16 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-indigo-400"
+                  />
+                  {lines.length > 1 && (
+                    <button onClick={() => setLines(lines.filter((_, j) => j !== i))}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600">
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setLines([...lines, { productId: '', quantity: 1 }])}
+              className="mt-2 text-xs font-medium text-indigo-600 hover:underline">
+              + Add another product
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+            <span className="text-slate-500">Items total (delivery added at booking)</span>
+            <b>{money(draftTotal)}</b>
+          </div>
+          {formError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{formError}</p>}
+          <Button onClick={createOrder} loading={creating} className="w-full"
+            disabled={!form.customerName.trim() || !form.address.trim() || !form.district.trim() || validLines.length === 0}>
+            Create draft order
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

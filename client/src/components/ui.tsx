@@ -1,7 +1,7 @@
 // Small reusable UI pieces used on every page.
 // Keeping them in one file makes the design consistent and easy to tweak.
 'use client';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 
 // ---------- Card ----------
@@ -157,6 +157,34 @@ export function EmptyState({ icon, title, hint }: { icon: ReactNode; title: stri
       <p className="font-medium text-slate-700">{title}</p>
       <p className="mt-1 max-w-xs text-sm text-slate-500">{hint}</p>
     </div>
+  );
+}
+
+// ---------- Product thumbnail (image with graceful fallback) ----------
+export function ProductImage({ src, name, size = 40 }: { src?: string | null; name: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <span
+        className="flex shrink-0 items-center justify-center rounded-lg bg-slate-100 font-semibold text-slate-400"
+        style={{ width: size, height: size, fontSize: size * 0.38 }}
+        title={name}
+      >
+        {name.slice(0, 1).toUpperCase()}
+      </span>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      width={size}
+      height={size}
+      onError={() => setFailed(true)}
+      className="shrink-0 rounded-lg border border-slate-200 object-cover"
+      style={{ width: size, height: size }}
+    />
   );
 }
 

@@ -8,20 +8,27 @@
 //
 // No REDIS_URL -> the queue is disabled and webhooks are processed inline,
 // exactly as before. Nothing else in the app changes.
-import Redis from 'ioredis';
+// ioredis is loaded LAZILY (require inside the functions) so the server runs
+// WITHOUT the package installed when the queue is off (REDIS_URL blank).
+// Install it only when you actually enable the queue:  npm install ioredis
+function loadRedis(): any {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('ioredis');
+}
 
 const QUEUE_KEY = 'fcomflow:webhooks';       // the durable task list
 const DEAD_KEY = 'fcomflow:webhooks:dead';   // poison payloads land here
 
-let producer: Redis | null = null;
+let producer: any = null;
 
 export function isQueueEnabled(): boolean {
   return Boolean(process.env.REDIS_URL);
 }
 
 // One lazily-created connection for pushing (shared across requests).
-function producerClient(): Redis {
+function producerClient(): any {
   if (!producer) {
+    const Redis = loadRedis();
     producer = new Redis(process.env.REDIS_URL as string, { maxRetriesPerRequest: null });
     producer.on('error', (e: Error) => console.warn('[queue] redis error:', e.message));
   }
@@ -40,6 +47,7 @@ export async function enqueueWebhook(source: string, payload: unknown): Promise<
 export async function startWebhookWorker(
   handler: (source: string, payload: unknown) => Promise<void>,
 ): Promise<void> {
+  const Redis = loadRedis();
   const consumer = new Redis(process.env.REDIS_URL as string, { maxRetriesPerRequest: null });
   consumer.on('error', (e: Error) => console.warn('[queue] worker redis error:', e.message));
   console.log('[queue] webhook worker started (Redis durable queue)');

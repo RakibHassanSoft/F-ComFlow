@@ -11,7 +11,8 @@ import { Badge, Button, Card, EmptyState, Loading, PageHeader } from '@/componen
 interface Order {
   id: string; orderNumber: number; customerName: string; district: string;
   courierName: string | null; trackingCode: string | null; courierStatus: string | null;
-  status: string; createdAt: string; product: { name: string }; quantity: number;
+  status: string; createdAt: string;
+  items: { id: string; quantity: number; product: { name: string } }[];
 }
 
 // The journey each parcel walks through
@@ -69,7 +70,7 @@ export default function ShippingPage() {
                       Order #{o.orderNumber}
                     </Link>
                     <p className="text-sm text-slate-500">
-                      {o.customerName} · {o.district} · {o.product.name} × {o.quantity}
+                      {o.customerName} · {o.district} · {o.items.map((i) => `${i.product.name} × ${i.quantity}`).join(', ')}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

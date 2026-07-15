@@ -57,8 +57,10 @@ export default function LabelPage() {
               <p className="font-bold">#{order.orderNumber}</p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Item</p>
-              <p className="font-medium">{order.product.name} × {order.quantity}</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Items</p>
+              {order.items.map((it: any) => (
+                <p key={it.id} className="font-medium">{it.product.name} × {it.quantity}</p>
+              ))}
             </div>
             <div className="text-right">
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">

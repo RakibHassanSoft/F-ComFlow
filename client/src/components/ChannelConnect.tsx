@@ -10,7 +10,7 @@
 // one-click buttons explain what's missing and manual mode still works.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { Facebook, MessageCircle, Send, Phone, Globe, Mail, Link2, Trash2, CheckCircle2, ChevronDown } from 'lucide-react';
+import { Facebook, MessageCircle, Send, Phone, Globe, Mail, Link2, Trash2, CheckCircle2, ChevronDown, Music2, AtSign } from 'lucide-react';
 import { api, API_ORIGIN } from '@/lib/api';
 import { Button, Field, Modal } from '@/components/ui';
 import { useSession } from '@/lib/session';
@@ -319,6 +319,30 @@ export function ChannelConnect() {
                 onClick={() => connectSimple('email', { address: emAddr })}>Connect email</Button>
             </div>
           )}
+        </div>
+        {/* TikTok — in development. TikTok has no open DM API; it needs a TikTok
+            Business / TikTok Shop partner approval, so we surface it as coming soon. */}
+        <div className="rounded-xl border border-dashed border-slate-200 p-3 opacity-80">
+          <div className="flex w-full items-center gap-2 text-sm font-semibold text-slate-500">
+            <Music2 size={15} className="text-slate-400" /> TikTok
+            <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">In development</span>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Coming soon. TikTok messaging needs a TikTok Business / TikTok Shop partner approval;
+            we&apos;ll enable it here once it&apos;s granted.
+          </p>
+        </div>
+        {/* Threads — in development. Threads has no DM API; only public replies
+            (read/reply/hide) via the Threads API, which needs Meta app review. */}
+        <div className="rounded-xl border border-dashed border-slate-200 p-3 opacity-80">
+          <div className="flex w-full items-center gap-2 text-sm font-semibold text-slate-500">
+            <AtSign size={15} className="text-slate-400" /> Threads
+            <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">In development</span>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Coming soon. Threads has no private-message API — only public replies on your posts.
+            We&apos;ll add reply management here once the Threads API is connected.
+          </p>
         </div>
       </div>
 

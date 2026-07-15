@@ -1,11 +1,14 @@
-// Phase 1: Login page.
+// Phase 1: Login page — email/password plus "Sign in with Google"
+// (the Google button appears only when NEXT_PUBLIC_GOOGLE_CLIENT_ID is set).
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Field } from '@/components/ui';
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('demo1234');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const googleBtn = useRef<HTMLDivElement>(null);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +30,39 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
+
+  // Google Identity Services: load the script, render the official button.
+  // Google hands us an ID token; our API verifies it and sets the cookies.
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+
+    const init = () => {
+      const google = (window as any).google;
+      if (!google?.accounts?.id || !googleBtn.current) return;
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response: { credential: string }) => {
+          setError('');
+          try {
+            await api.post('/auth/google', { credential: response.credential });
+            router.push('/dashboard');
+          } catch (err: any) {
+            setError(err.message);
+          }
+        },
+      });
+      google.accounts.id.renderButton(googleBtn.current, {
+        theme: 'outline', size: 'large', width: 336, text: 'continue_with',
+      });
+    };
+
+    if ((window as any).google?.accounts?.id) { init(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = init;
+    document.head.appendChild(script);
+  }, [router]);
 
   return (
     <main className="flex min-h-screen">
@@ -59,6 +96,20 @@ export default function LoginPage() {
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
           <Button type="submit" loading={loading} className="w-full">Log in</Button>
+
+          {GOOGLE_CLIENT_ID && (
+            <>
+              <div className="flex items-center gap-3 pt-1">
+                <span className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs text-slate-400">or</span>
+                <span className="h-px flex-1 bg-slate-200" />
+              </div>
+              <div ref={googleBtn} className="flex justify-center" />
+              <p className="text-center text-xs text-slate-400">
+                First time with Google? A fresh store is created for you automatically.
+              </p>
+            </>
+          )}
 
           <p className="pt-2 text-center text-sm text-slate-500">
             New here?{' '}

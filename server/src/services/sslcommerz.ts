@@ -27,9 +27,11 @@ export async function createSslczSession(invoice: {
   id: string; amount: number; orderNumber: number;
   customerName: string; phone: string; address: string; district: string;
   productName: string;
+  callbackPath?: string; // custom gateway callback (defaults to the pay-link one)
 }): Promise<string> {
   const publicApi = process.env.PUBLIC_API_URL || `http://localhost:${config.port}`;
-  const cb = `${publicApi}/api/pay/${invoice.id}/sslcz/callback`;
+  const cb = `${publicApi}${invoice.callbackPath || `/api/pay/${invoice.id}/sslcz/callback`}`;
+  const sep = cb.includes('?') ? '&' : '?'; // callbackPath may already carry ?purpose=…
 
   const body = new URLSearchParams({
     store_id: process.env.SSLCZ_STORE_ID || '',
@@ -39,8 +41,8 @@ export async function createSslczSession(invoice: {
     // Unique per attempt (SSLCOMMERZ requires it); the invoice id travels in the URL
     tran_id: `FC${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`.toUpperCase(),
     success_url: cb,
-    fail_url: `${cb}?outcome=failed`,
-    cancel_url: `${cb}?outcome=cancelled`,
+    fail_url: `${cb}${sep}outcome=failed`,
+    cancel_url: `${cb}${sep}outcome=cancelled`,
     cus_name: invoice.customerName,
     cus_email: 'customer@fcomflow.local', // gateway requires one; chat customers rarely have email
     cus_add1: invoice.address,

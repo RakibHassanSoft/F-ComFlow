@@ -1,7 +1,8 @@
 """Phase 3: The AI Order Parser (Python side).
 
 Two engines, same output shape:
-  1. Gemini 1.5 Flash  — used automatically when GEMINI_API_KEY is set in .env
+  1. Google Gemini     — used automatically when GEMINI_API_KEY is set in .env
+                         (model from GEMINI_MODEL, default gemini-2.5-flash)
   2. Rule-based NLP    — always available, needs no API key, and is the
                          fallback whenever Gemini fails or times out
 
@@ -16,9 +17,12 @@ import httpx
 
 from .districts import find_district
 
+# Model is configurable — Gemini 1.x/2.0 are retired (404). Default to the
+# current stable flash model; override with GEMINI_MODEL (e.g. gemini-3.5-flash).
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-1.5-flash:generateContent"
+    f"https://generativelanguage.googleapis.com/v1beta/models/"
+    f"{GEMINI_MODEL}:generateContent"
 )
 
 BN_DIGITS = str.maketrans("০১২৩৪৫৬৭৮৯", "0123456789")
@@ -140,7 +144,11 @@ Chat:
 def parse_order(chat_text: str, customer_name: str | None, products: list[dict]) -> dict:
     if os.environ.get("GEMINI_API_KEY"):
         try:
-            return parse_with_gemini(chat_text, customer_name, products)
-        except Exception:
-            pass  # Gemini down / bad output -> rule engine takes over
+            result = parse_with_gemini(chat_text, customer_name, products)
+            print(f"[ai] parsed with Gemini ({GEMINI_MODEL})")
+            return result
+        except Exception as e:
+            # Log WHY so you can tell a real Gemini failure (bad key, wrong model,
+            # quota) apart from a silent fallback. Parsing still degrades to rules.
+            print(f"[ai] Gemini parse FAILED ({GEMINI_MODEL}): {e} — falling back to rules")
     return parse_with_rules(chat_text, customer_name, products)

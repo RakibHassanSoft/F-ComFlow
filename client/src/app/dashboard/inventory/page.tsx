@@ -1,17 +1,19 @@
 // Phase 4: Inventory — product catalog with live stock and low-stock warnings.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { Package, Plus, Pencil, AlertTriangle } from 'lucide-react';
+import { Package, Plus, Pencil, AlertTriangle, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
 import { money } from '@/lib/format';
-import { Button, Card, EmptyState, Field, Loading, Modal, PageHeader } from '@/components/ui';
+import { getSocket } from '@/lib/socket';
+import { Button, Card, EmptyState, Field, Loading, Modal, PageHeader, ProductImage } from '@/components/ui';
+import { ImageUploader } from '@/components/ImageUploader';
 
 interface Product {
   id: string; sku: string; name: string; price: string;
-  stockQuantity: number; reorderThreshold: number;
+  stockQuantity: number; reorderThreshold: number; imageUrl: string | null; images: string[];
 }
 
-const emptyForm = { sku: '', name: '', price: '', stockQuantity: '', reorderThreshold: '5' };
+const emptyForm = { sku: '', name: '', price: '', stockQuantity: '', reorderThreshold: '5', images: [] as string[] };
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[] | null>(null);
@@ -26,13 +28,31 @@ export default function InventoryPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // LIVE: an external store (Shopify/WooCommerce webhook) just sold something —
+  // the central stock changed, so refresh the table and show who did it.
+  const [syncMsg, setSyncMsg] = useState('');
+  useEffect(() => {
+    const socket = getSocket();
+    const onSynced = (data: { sku: string; stockQuantity: number }) => {
+      setSyncMsg(`External store sale synced: ${data.sku} → ${data.stockQuantity} left in central stock`);
+      setTimeout(() => setSyncMsg(''), 7000);
+      load();
+    };
+    socket.on('inventory:synced', onSynced);
+    return () => { socket.off('inventory:synced', onSynced); };
+  }, [load]);
+
   function openAdd() {
     setForm(emptyForm);
     setError('');
     setShowAdd(true);
   }
   function openEdit(p: Product) {
-    setForm({ sku: p.sku, name: p.name, price: String(p.price), stockQuantity: String(p.stockQuantity), reorderThreshold: String(p.reorderThreshold) });
+    setForm({
+      sku: p.sku, name: p.name, price: String(p.price),
+      stockQuantity: String(p.stockQuantity), reorderThreshold: String(p.reorderThreshold),
+      images: p.images?.length ? p.images : (p.imageUrl ? [p.imageUrl] : []),
+    });
     setError('');
     setEditing(p);
   }
@@ -45,11 +65,13 @@ export default function InventoryPage() {
         await api.patch(`/products/${editing.id}`, {
           name: form.name, price: Number(form.price),
           stockQuantity: Number(form.stockQuantity), reorderThreshold: Number(form.reorderThreshold),
+          images: form.images,
         });
       } else {
         await api.post('/products', {
           sku: form.sku, name: form.name, price: Number(form.price),
           stockQuantity: Number(form.stockQuantity), reorderThreshold: Number(form.reorderThreshold),
+          images: form.images,
         });
       }
       setShowAdd(false);
@@ -71,6 +93,13 @@ export default function InventoryPage() {
         subtitle="One central stock ledger — every channel sells from the same numbers."
         action={<Button onClick={openAdd}><Plus size={15} /> Add product</Button>}
       />
+
+      {syncMsg && (
+        <Card className="mb-4 flex items-center gap-3 border-indigo-200 bg-indigo-50/60 p-4">
+          <RefreshCw size={18} className="shrink-0 text-indigo-500" />
+          <p className="text-sm font-medium">{syncMsg}</p>
+        </Card>
+      )}
 
       {lowStock.length > 0 && (
         <Card className="mb-4 flex items-center gap-3 border-amber-200 bg-amber-50/60 p-4">
@@ -108,7 +137,12 @@ export default function InventoryPage() {
                 return (
                   <tr key={p.id} className="border-b border-slate-50 transition hover:bg-slate-50/60">
                     <td className="px-5 py-3 font-mono text-xs text-slate-500">{p.sku}</td>
-                    <td className="px-5 py-3 font-medium">{p.name}</td>
+                    <td className="px-5 py-3">
+                      <span className="flex items-center gap-3 font-medium">
+                        <ProductImage src={p.imageUrl} name={p.name} size={36} />
+                        {p.name}
+                      </span>
+                    </td>
                     <td className="px-5 py-3">{money(p.price)}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold
@@ -142,6 +176,7 @@ export default function InventoryPage() {
           <Field label="Price (BDT)" type="number" value={form.price} onChange={(v) => setForm({ ...form, price: v })} placeholder="550" />
           <Field label="Stock quantity" type="number" value={form.stockQuantity} onChange={(v) => setForm({ ...form, stockQuantity: v })} placeholder="40" />
           <Field label="Reorder threshold" type="number" value={form.reorderThreshold} onChange={(v) => setForm({ ...form, reorderThreshold: v })} />
+          <ImageUploader images={form.images} onChange={(imgs) => setForm({ ...form, images: imgs })} />
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
           <Button onClick={save} loading={saving} className="w-full">{editing ? 'Save changes' : 'Add product'}</Button>
         </div>

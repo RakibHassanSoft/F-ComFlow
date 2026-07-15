@@ -16,6 +16,7 @@ interface Analytics {
   byDay: { date: string; revenue: number; orders: number }[];
   byProduct: { name: string; revenue: number; quantity: number; orders: number }[];
   byDistrict: { district: string; revenue: number; orders: number }[];
+  returnReasons: { reason: string; count: number }[];
 }
 
 const RANGES = [7, 30, 90];
@@ -136,6 +137,30 @@ export default function AnalyticsPage() {
               </div>
             </Card>
           </div>
+
+          {/* Return reasons — why parcels come back (feeds the risk story) */}
+          {data.returnReasons.length > 0 && (
+            <Card className="mt-6 p-6">
+              <h2 className="mb-1 font-semibold">Top return reasons</h2>
+              <p className="mb-4 text-sm text-slate-500">Recorded when an order is marked returned — fix the biggest bar first.</p>
+              <div className="space-y-3">
+                {data.returnReasons.slice(0, 6).map((r) => {
+                  const maxReason = Math.max(1, ...data.returnReasons.map((x) => x.count));
+                  return (
+                    <div key={r.reason}>
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="truncate font-medium">{r.reason}</span>
+                        <span className="ml-3 shrink-0 text-slate-500">{r.count} return{r.count !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100">
+                        <div className="h-2 rounded-full bg-red-400" style={{ width: `${Math.max(4, Math.round((r.count / maxReason) * 100))}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
         </>
       )}
     </div>

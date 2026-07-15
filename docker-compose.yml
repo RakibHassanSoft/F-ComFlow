@@ -32,8 +32,24 @@ services:
     restart: unless-stopped
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     ports:
       - "8000:8000"
+
+  redis:
+    image: redis:7-alpine
+    container_name: fcomflow-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]  # persist the durable queue
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   server:
     build: ./server
@@ -44,8 +60,16 @@ services:
         condition: service_healthy
       ai:
         condition: service_started
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://fcomflow:${POSTGRES_PASSWORD:-fcomflow}@postgres:5432/fcomflow
+      # Durable webhook queue (blank = inline processing, no Redis needed)
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # Database-level tenant isolation via Row-Level Security (see prisma/rls.sql)
+      RLS_ENABLED: ${RLS_ENABLED:-false}
+      # Cloudinary product photo uploads (blank = uploads disabled)
+      CLOUDINARY_URL: ${CLOUDINARY_URL:-}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env}
       CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
@@ -54,6 +78,8 @@ services:
       PORT: 4000
       # Public https URL of THIS API (webhooks: Telegram/Viber/email/couriers)
       PUBLIC_API_URL: ${PUBLIC_API_URL:-}
+      # "Sign in with Google" (blank = button hidden)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       # Real Meta / WhatsApp integration + one-click connect
       META_VERIFY_TOKEN: ${META_VERIFY_TOKEN:-}
       META_APP_ID: ${META_APP_ID:-}
@@ -75,6 +101,8 @@ services:
       PATHAO_WEBHOOK_SECRET: ${PATHAO_WEBHOOK_SECRET:-}
       REDX_BASE_URL: ${REDX_BASE_URL:-}
       REDX_ACCESS_TOKEN: ${REDX_ACCESS_TOKEN:-}
+      REDX_PICKUP_STORE_ID: ${REDX_PICKUP_STORE_ID:-}
+      REDX_WEBHOOK_TOKEN: ${REDX_WEBHOOK_TOKEN:-}
       STEADFAST_BASE_URL: ${STEADFAST_BASE_URL:-}
       STEADFAST_API_KEY: ${STEADFAST_API_KEY:-}
       STEADFAST_SECRET_KEY: ${STEADFAST_SECRET_KEY:-}
@@ -85,6 +113,10 @@ services:
       BKASH_APP_SECRET: ${BKASH_APP_SECRET:-}
       BKASH_USERNAME: ${BKASH_USERNAME:-}
       BKASH_PASSWORD: ${BKASH_PASSWORD:-}
+      # Real SSLCOMMERZ hosted checkout (blank = button hidden)
+      SSLCZ_BASE_URL: ${SSLCZ_BASE_URL:-}
+      SSLCZ_STORE_ID: ${SSLCZ_STORE_ID:-}
+      SSLCZ_STORE_PASSWD: ${SSLCZ_STORE_PASSWD:-}
     ports:
       - "4000:4000"
 
@@ -96,6 +128,7 @@ services:
         # Baked in at build time; defaults to META_APP_ID so one-click just works
         NEXT_PUBLIC_META_APP_ID: ${NEXT_PUBLIC_META_APP_ID:-${META_APP_ID:-}}
         NEXT_PUBLIC_META_WA_CONFIG_ID: ${NEXT_PUBLIC_META_WA_CONFIG_ID:-}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID:-}}
     container_name: fcomflow-web
     restart: unless-stopped
     depends_on:
@@ -105,3 +138,4 @@ services:
 
 volumes:
   pgdata:
+  redisdata:

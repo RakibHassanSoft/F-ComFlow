@@ -11,7 +11,7 @@ import { MessageSquare, Sparkles, Send, UserCheck, Radio, Zap, Package, User } f
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { timeAgo, money } from '@/lib/format';
-import { Badge, Button, Card, EmptyState, Field, Modal, PageHeader } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, Field, Modal, PageHeader, ProductImage } from '@/components/ui';
 import { useSession } from '@/lib/session';
 
 interface Customer { id: string; name: string }
@@ -26,7 +26,7 @@ interface Parsed {
   quantity: number; lowConfidence: Record<string, boolean>;
 }
 interface Template { id: string; title: string; body: string }
-interface Product { id: string; name: string; price: string }
+interface Product { id: string; name: string; price: string; imageUrl?: string | null }
 interface CustomerInfo {
   customer: { id: string; name: string; phone: string | null };
   stats: { totalOrders: number; deliveredOrReturned: number; returnRate: number; totalSpent: number };
@@ -50,6 +50,17 @@ export default function InboxPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // New features
+  // Conversation list search + unread-only filter
+  const [convoSearch, setConvoSearch] = useState('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const visibleConversations = conversations.filter((c) => {
+    if (unreadOnly && c.unreadCount === 0) return false;
+    const q = convoSearch.trim().toLowerCase();
+    if (!q) return true;
+    return c.customer.name.toLowerCase().includes(q)
+      || (c.messages?.[0]?.text || '').toLowerCase().includes(q);
+  });
+
   const [templates, setTemplates] = useState<Template[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -188,12 +199,31 @@ export default function InboxPage() {
 
       <div className="flex flex-col gap-4 lg:h-[calc(100vh-180px)] lg:flex-row">
         {/* ---------- Conversation list ---------- */}
-        <Card className="max-h-60 w-full shrink-0 overflow-y-auto lg:max-h-none lg:w-72">
-          {conversations.length === 0 ? (
-            <EmptyState icon={<MessageSquare size={22} />} title="No conversations yet"
-              hint='Press "Simulate incoming message" to receive a customer chat.' />
+        <Card className="max-h-72 w-full shrink-0 overflow-y-auto lg:max-h-none lg:w-72">
+          {/* Search + unread filter */}
+          <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-slate-100 bg-white p-2.5">
+            <input
+              value={convoSearch}
+              onChange={(e) => setConvoSearch(e.target.value)}
+              placeholder="Search chats…"
+              className="min-w-0 flex-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs outline-none transition focus:border-indigo-400 focus:bg-white"
+            />
+            <button
+              onClick={() => setUnreadOnly(!unreadOnly)}
+              className={`shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold transition
+                ${unreadOnly ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            >
+              Unread
+            </button>
+          </div>
+          {visibleConversations.length === 0 ? (
+            <EmptyState icon={<MessageSquare size={22} />}
+              title={conversations.length === 0 ? 'No conversations yet' : 'No chats match'}
+              hint={conversations.length === 0
+                ? 'Press "Simulate incoming message" to receive a customer chat.'
+                : 'Try a different search, or turn off the Unread filter.'} />
           ) : (
-            conversations.map((c) => (
+            visibleConversations.map((c) => (
               <button
                 key={c.id}
                 onClick={() => openConversation(c)}
@@ -375,9 +405,10 @@ export default function InboxPage() {
           <div className="space-y-2">
             {products.map((p) => (
               <button key={p.id} onClick={() => sendProduct(p.id)}
-                className="flex w-full items-center justify-between rounded-lg border border-slate-200 p-3 text-left hover:bg-slate-50">
-                <span className="text-sm font-medium">{p.name}</span>
-                <span className="text-sm text-slate-500">{money(p.price)}</span>
+                className="flex w-full items-center gap-3 rounded-lg border border-slate-200 p-3 text-left hover:bg-slate-50">
+                <ProductImage src={p.imageUrl} name={p.name} size={36} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.name}</span>
+                <span className="shrink-0 text-sm text-slate-500">{money(p.price)}</span>
               </button>
             ))}
           </div>

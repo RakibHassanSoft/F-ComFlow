@@ -146,7 +146,8 @@ export default function SettingsPage() {
         <ChannelConnect />
       </Card>
 
-      {/* ---------- Automation ---------- */}
+      {/* ---------- Automation (OWNER only — the server rejects agent saves) ---------- */}
+      {isOwner && (
       <Card className="mb-4 p-6">
         <h2 className="flex items-center gap-2 font-semibold"><Clock size={17} /> Automation</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -187,6 +188,7 @@ export default function SettingsPage() {
           {autoSaved && <span className="text-sm font-medium text-emerald-600">Saved ✓</span>}
         </div>
       </Card>
+      )}
 
       {/* ---------- Team (OWNER only) ---------- */}
       {isOwner && (
@@ -265,7 +267,8 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* ---------- Risk threshold ---------- */}
+      {/* ---------- Risk threshold (OWNER only) ---------- */}
+      {isOwner && (
       <Card className="p-6">
         <h2 className="font-semibold">COD risk threshold</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -284,6 +287,7 @@ export default function SettingsPage() {
           {saved && <span className="text-sm font-medium text-emerald-600">Saved ✓</span>}
         </div>
       </Card>
+      )}
     </div>
   );
 }

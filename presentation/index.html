@@ -49,6 +49,8 @@
   td{padding:12px 20px;border-bottom:1px solid #f8fafc}
   tr:hover td{background:#f8fafc}
   .link{color:var(--indigo);font-weight:600;cursor:pointer;text-decoration:none}.link:hover{text-decoration:underline}
+  .thumb{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;
+         background:#eef2ff;color:#6366f1;font-weight:800;font-size:14px;flex-shrink:0}
 
   /* ---------- Login ---------- */
   #login{display:flex;min-height:100vh}
@@ -205,7 +207,9 @@
 
   @media(max-width:920px){
     #topbar{display:flex}
-    .sidebar{transform:translateX(-100%);transition:transform .22s ease;width:250px}
+    /* Sidebar must sit ABOVE the scrim (z-index 25) and top bar (40), or taps on
+       nav items land on the overlay instead of the links. */
+    .sidebar{transform:translateX(-100%);transition:transform .22s ease;width:250px;z-index:45}
     .sidebar.open{transform:translateX(0);box-shadow:0 0 60px rgba(15,23,42,.5)}
     #navScrim.show{display:block}
     .main{margin-left:0;padding:72px 14px 90px;max-width:none}
@@ -286,6 +290,7 @@
       <a data-page="orders"><span class="ico">🛍</span> Orders</a>
       <a data-page="customers"><span class="ico">👥</span> Customers</a>
       <a data-page="inventory"><span class="ico">📦</span> Inventory <span class="navbadge" id="lowbadge" style="display:none"></span></a>
+      <a data-page="store"><span class="ico">🏬</span> Store</a>
       <a data-page="shipping"><span class="ico">🚚</span> Shipping</a>
       <a data-page="payments"><span class="ico">💳</span> Payments</a>
       <a data-page="analytics"><span class="ico">📊</span> Analytics</a>
@@ -323,12 +328,12 @@ const S = {
   selConvo: null,
   demoStep: -1,
   products: [
-    { sku:'TSH-001', name:'Premium T-Shirt', price:550,  stock:40, reorder:10 },
-    { sku:'PNJ-002', name:'Cotton Panjabi',  price:1450, stock:18, reorder:5 },
-    { sku:'SRE-003', name:'Jamdani Saree',   price:3200, stock:7,  reorder:3 },
-    { sku:'WAL-004', name:'Leather Wallet',  price:850,  stock:25, reorder:8 },
-    { sku:'WCH-005', name:'Classic Watch',   price:2100, stock:2,  reorder:5 },
-    { sku:'BAG-006', name:'Canvas Backpack', price:1250, stock:15, reorder:5 },
+    { sku:'TSH-001', name:'Premium T-Shirt', price:550,  stock:40, reorder:10, listed:true,  charged:true },
+    { sku:'PNJ-002', name:'Cotton Panjabi',  price:1450, stock:18, reorder:5,  listed:true,  charged:true },
+    { sku:'SRE-003', name:'Jamdani Saree',   price:3200, stock:7,  reorder:3,  listed:true,  charged:false },
+    { sku:'WAL-004', name:'Leather Wallet',  price:850,  stock:25, reorder:8,  listed:false, charged:false },
+    { sku:'WCH-005', name:'Classic Watch',   price:2100, stock:2,  reorder:5,  listed:false, charged:false },
+    { sku:'BAG-006', name:'Canvas Backpack', price:1250, stock:15, reorder:5,  listed:false, charged:false },
   ],
   convos: [
     { id:1, name:'Karima Akter', channel:'MESSENGER', unread:2, time:'2m', msgs:[
@@ -411,7 +416,7 @@ function go(page, arg){
   S.page = page;
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active', a.dataset.page===page));
   const render = { overview:rOverview, inbox:rInbox, orders:rOrders, order:()=>rOrder(arg),
-                   customers:rCustomers, inventory:rInventory, shipping:rShipping, payments:rPayments,
+                   customers:rCustomers, inventory:rInventory, store:rStore, shipping:rShipping, payments:rPayments,
                    analytics:rAnalytics, ads:rAds, settings:rSettings }[page];
   $('main').innerHTML = render();
   updateLowBadge();
@@ -656,10 +661,10 @@ function confirmOrder(no){
 }
 function bookCourier(no){
   openModal(`<h3>Compare courier rates</h3>
-    ${[['Pathao','৳150.00 · ~2 days'],['RedX','৳135.00 · ~3 days'],['Paperfly','৳165.00 · ~4 days']].map(r=>`
+    ${[['Pathao','৳150.00 · ~2 days · LIVE API'],['RedX','৳135.00 · ~3 days · LIVE API'],['Steadfast','৳140.00 · ~3 days · LIVE API']].map(r=>`
     <div class="rate"><div><b>${r[0]}</b><div class="sub">${r[1]}</div></div>
       <button class="btn btn-primary" onclick="doBook(${no},'${r[0]}')">Book</button></div>`).join('')}
-    <p class="sub" style="font-size:12px">Double-clicking Book is safe — the server allows exactly one consignment per order.</p>`);
+    <p class="sub" style="font-size:12px">Real Pathao / RedX / Steadfast APIs (add keys) — booking, labels and live tracking. Double-clicking Book is safe: exactly one consignment per order.</p>`);
 }
 function doBook(no, courier){
   closeModal(); const o=findOrder(no);
@@ -709,18 +714,18 @@ function rInventory(){
   const low = S.products.filter(p=>p.stock<=p.reorder);
   return `
   <div class="page-head"><div><h1>Inventory</h1><p class="sub">One central stock ledger — every channel sells from the same numbers.</p></div>
-    <button class="btn btn-primary" onclick="toast('➕ In the real app this opens the add-product form')">＋ Add product</button></div>
+    <button class="btn btn-primary" onclick="toast('➕ Add a product with up to 3 photos (uploaded to Cloudinary)')">＋ Add product</button></div>
   ${low.length?`<div class="card" style="border-color:#fcd34d;background:#fffdf5;padding:14px 20px;margin-bottom:16px">
     ⚠️ <b>${low.length} product${low.length>1?'s':''} low on stock:</b> ${low.map(p=>p.name).join(', ')} — restock soon.</div>`:''}
   <div class="card" style="overflow-x:auto"><table>
     <tr><th>SKU</th><th>Product</th><th>Price</th><th>Stock</th><th>Reorder at</th></tr>
     ${S.products.map(p=>`<tr>
       <td style="font-family:monospace;font-size:12px;color:var(--muted)">${p.sku}</td>
-      <td><b>${p.name}</b></td><td>${money(p.price)}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:10px"><span class="thumb">${p.name.slice(0,1)}</span><b>${p.name}</b></span></td><td>${money(p.price)}</td>
       <td><span class="badge ${p.stock<=p.reorder?'b-HIGH':'b-LOW'}">${p.stock} in stock</span></td>
       <td style="color:var(--muted)">${p.reorder}</td></tr>`).join('')}
   </table></div>
-  <div class="hint">Also syncs with external stores: a Shopify/WooCommerce order calls our webhook and decrements this same central stock atomically.</div>`;
+  <div class="hint">Each product carries up to 3 photos (Cloudinary upload). Also syncs with external stores: a Shopify/WooCommerce order calls our webhook and decrements this same central stock atomically.</div>`;
 }
 
 /* =====================================================================
@@ -857,8 +862,76 @@ function rAds(){
       <td style="text-align:right">${a.orders}</td>
       <td style="text-align:right;font-weight:700;color:${a.revenue/a.spend>=2?'var(--green)':'var(--amber)'}">${(a.revenue/a.spend).toFixed(1)}×</td></tr>`).join('')}
   </table></div>
-  <div class="hint">Attribution flows automatically: the ad's referral tag arrives in the webhook → sticks to the conversation → every order created from that chat carries the ad id.</div>`;
+
+  <div class="card" style="margin-top:18px;padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:16px 20px;border-bottom:1px solid #f1f5f9">
+      <div><b>✨ AI insights &amp; recommendations</b>
+        <div class="sub" style="font-size:12.5px">Each campaign judged on real ROI — spend vs orders traced to your inbox. Apply with one click.</div></div>
+      <button class="btn btn-secondary" onclick="toast('✨ Re-analyzed campaigns on real ROI')">↻ Re-analyze</button>
+    </div>
+    <div style="padding:16px 20px">
+      <p style="background:#eef2ff;color:#3730a3;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px">
+        Analyzed 3 campaigns — ৳6,400 spend, ৳21,300 attributed revenue (3.3× overall ROI). 1 is draining budget — pause suggested. 1 is clearly profitable — scale it up.</p>
+      ${[
+        ['PAUSE','Eid Panjabi — Retargeting','#fef2f2','#b91c1c','Spent ৳2,100 with no orders traced to your inbox.','Pause campaign'],
+        ['SCALE','Summer Kurti — Lookalike','#ecfdf5','#047857','Strong performer: 4.1× ROI on 12 orders. Raise daily budget ৳400 → 520.','Set 520 BDT/day'],
+        ['TRIM','Saree Collection — Broad','#fffbeb','#b45309','Barely breaking even (1.1×). Trim budget ৳300 → 210 and watch.','Set 210 BDT/day'],
+      ].map(r=>`
+      <div class="rate" style="align-items:flex-start">
+        <div style="min-width:0"><span class="badge" style="background:${r[2]};color:${r[3]}">${r[0]}</span>
+          <b style="margin-left:8px">${r[1]}</b>
+          <div class="sub" style="font-size:12.5px;margin-top:4px">${r[4]}</div></div>
+        <button class="btn ${r[0]==='PAUSE'?'btn-danger':'btn-primary'}" onclick="toast('✅ Applied: ${r[5]} — ${r[1]}')">${r[5]}</button>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="hint">Attribution flows automatically: the ad's referral tag arrives in the webhook → sticks to the conversation → every order created from that chat carries the ad id. The AI engine then rolls orders up to the campaign and recommends scale / pause / trim.</div>`;
 }
+
+/* =====================================================================
+   STORE  (public storefront — fcom.com/&lt;slug&gt;)
+   ===================================================================== */
+function rStore(){
+  const listed = S.products.filter(p=>p.listed);
+  const fee = S.products.filter(p=>p.listed && !p.charged).length * 10;
+  return `
+  <div class="page-head"><div><h1>Your store</h1><p class="sub">A shareable storefront on your own link — sell straight from Facebook, Instagram or anywhere you post.</p></div>
+    <span class="badge b-LOW">LIVE</span></div>
+
+  <div class="card" style="padding:20px;margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div><b style="font-size:16px">Dhaka Trends BD</b>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <a class="link" style="font-family:monospace" onclick="toast('🔗 Opens the public storefront in a new tab')">fcom.com/dhaka-trends</a>
+          <button class="btn btn-secondary" style="padding:5px 10px" onclick="toast('🔗 Store link copied — share it anywhere')">Copy link</button></div></div>
+      <button class="btn btn-secondary" onclick="toast('⏸ Store paused / resumed')">Pause store</button>
+    </div>
+  </div>
+
+  <div class="stats" style="margin-bottom:18px">
+    <div class="card stat" style="cursor:default"><div class="v">৳500</div><div class="l">One-time setup — paid</div></div>
+    <div class="card stat" style="cursor:default"><div class="v">৳10</div><div class="l">Per listed product</div></div>
+    <div class="card stat" style="cursor:default"><div class="v">${listed.length}</div><div class="l">Products on storefront</div></div>
+    <div class="card stat" style="cursor:default"><div class="v">${money(fee)}</div><div class="l">Listing fees due</div></div>
+  </div>
+
+  <div class="card" style="overflow:hidden">
+    <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9"><b>Products on your storefront</b></div>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Product</th><th style="text-align:right">Price</th><th style="text-align:right">Stock</th><th style="text-align:right">On storefront</th></tr>
+      ${S.products.map(p=>`<tr>
+        <td><span style="display:inline-flex;align-items:center;gap:10px"><span class="thumb">${p.name.slice(0,1)}</span><b>${p.name}</b></span></td>
+        <td style="text-align:right">${money(p.price)}</td>
+        <td style="text-align:right;color:var(--muted)">${p.stock}</td>
+        <td style="text-align:right">
+          <button class="badge" style="cursor:pointer;border:none;background:${p.listed?'#ecfdf5':'#f1f5f9'};color:${p.listed?'#047857':'#64748b'}"
+            onclick="toggleListed('${p.name}')">${p.listed?'Listed':'List it'}</button></td></tr>`).join('')}
+    </table></div>
+  </div>
+  <p class="sub" style="margin-top:12px;font-size:12px">Listing a product the first time adds a one-time ৳10 fee (paid via SSLCommerz). Customers order via COD or online pay — with an optional prepay QR on COD. The store is link-only: it never appears in a public directory.</p>`;
+}
+function toggleListed(name){ const p=S.products.find(p=>p.name===name); if(p){ p.listed=!p.listed; go('store'); } }
 
 /* =====================================================================
    SETTINGS  (Phase 7 threshold)
@@ -874,9 +947,13 @@ function rSettings(){
       <div><dt>Role</dt><dd>OWNER</dd></div></dl></div>
 
   <div class="card" style="padding:22px;max-width:620px;margin-bottom:16px"><b>🔌 Connected channels</b>
-    <p class="sub" style="margin:6px 0 14px">Connect your real Facebook Page, Instagram, WhatsApp number, Telegram or Viber bot — one click.</p>
+    <p class="sub" style="margin:6px 0 14px">One unified inbox for Messenger, Instagram, WhatsApp, Telegram, Viber, a website chat widget and email — all one-click.</p>
     <div class="team-row"><div><b>Dhaka Trends BD Page</b><div class="sub" style="font-size:12px">Messenger · connected</div></div><span class="badge b-LOW">LIVE</span></div>
+    <div class="team-row"><div><b>@dhakatrends</b><div class="sub" style="font-size:12px">Instagram · connected</div></div><span class="badge b-LOW">LIVE</span></div>
     <div class="team-row"><div><b>@dhakatrends_bot</b><div class="sub" style="font-size:12px">Telegram · connected</div></div><span class="badge b-LOW">LIVE</span></div>
+    <div class="team-row"><div><b>Website chat widget</b><div class="sub" style="font-size:12px">Web · one-line embed</div></div><span class="badge b-LOW">LIVE</span></div>
+    <div class="team-row" style="opacity:.7"><div><b>TikTok</b><div class="sub" style="font-size:12px">Needs TikTok Business/Shop partner approval</div></div><span class="badge b-MEDIUM">IN DEV</span></div>
+    <div class="team-row" style="opacity:.7"><div><b>Threads</b><div class="sub" style="font-size:12px">Public replies only — no DM API</div></div><span class="badge b-MEDIUM">IN DEV</span></div>
     <button class="btn btn-secondary" onclick="toast('🔌 In the real app this opens the one-click channel connect flow')">＋ Connect a channel</button></div>
 
   <div class="card" style="padding:22px;max-width:620px;margin-bottom:16px"><b>⏰ Automation</b>

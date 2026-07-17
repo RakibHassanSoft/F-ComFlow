@@ -1,7 +1,4 @@
-// PUBLIC customer payment page — opened from the advance pay-link a merchant
-// sends in chat. No login required; it talks to the public /api/pay endpoints.
-// When the server has bKash credentials, a real "Pay with bKash" checkout is
-// offered; the sandbox wallet button always works.
+// Public pay page — no login, hits /api/pay. Real gateway shown when configured.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -125,17 +122,19 @@ export default function PayPage() {
                 {paying ? 'Opening bKash…' : `Pay with bKash`}
               </button>
             )}
-            <button
-              onClick={pay}
-              disabled={paying}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {paying ? 'Processing…' : `Pay ${money(info.amount)}${info.bkashEnabled || info.sslczEnabled ? ' (demo wallet)' : ''}`}
-            </button>
+            {!info.sslczEnabled && !info.bkashEnabled && (
+              <button
+                onClick={pay}
+                disabled={paying}
+                className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {paying ? 'Processing…' : `Pay ${money(info.amount)}`}
+              </button>
+            )}
             <p className="mt-3 text-xs text-slate-400">
               {info.sslczEnabled || info.bkashEnabled
-                ? 'Sandbox gateways — no real money moves.'
-                : 'Sandbox payment — bKash / Nagad / card in production.'}
+                ? 'You’ll be taken to a secure payment page to complete your payment.'
+                : 'No payment gateway is configured yet — this marks the order paid for testing.'}
             </p>
           </div>
         )}

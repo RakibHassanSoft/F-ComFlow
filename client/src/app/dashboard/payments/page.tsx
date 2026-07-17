@@ -1,6 +1,4 @@
-// Phase 6: Payments — the settlement ledger with running balance,
-// per-payment fee breakdown (1% MDR + 15% VAT on the fee), a date-range
-// filter with period totals, and CSV export.
+// Payments — settlement ledger with running balance, fees and CSV export.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -94,7 +92,7 @@ export default function PaymentsPage() {
       {entries.length === 0 ? (
         <Card>
           <EmptyState icon={<Wallet size={22} />} title={filtered ? 'No settlements in this period' : 'No settlements yet'}
-            hint={filtered ? 'Widen the date range or clear the filter.' : 'Create a QR invoice on an order and simulate the customer payment.'} />
+            hint={filtered ? 'Widen the date range or clear the filter.' : 'Settled payments from your orders will appear here.'} />
         </Card>
       ) : (
         <Card className="overflow-x-auto">

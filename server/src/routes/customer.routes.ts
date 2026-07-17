@@ -1,6 +1,4 @@
-// Customer directory — every customer with their order history rolled up
-// (order count, return rate, total spent, last activity). The same aggregate
-// logic the inbox side-panel uses, across the whole customer base.
+// Customer directory — order history, return rate and spend per customer.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

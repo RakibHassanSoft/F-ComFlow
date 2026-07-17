@@ -1,9 +1,4 @@
-// Phase 1: The protected dashboard shell.
-// - Redirects to /login if there is no valid session
-// - Dark sidebar with all modules; AGENT role sees only what it may use
-// - Connects Socket.io and joins this tenant's room (Phase 2)
-// - Notification bell: collects every live event (messages, low stock,
-//   payments, store sync) into a dropdown with an unread count
+// Dashboard shell — auth guard, sidebar nav, live socket + notification bell.
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';

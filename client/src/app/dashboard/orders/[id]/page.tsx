@@ -1,8 +1,4 @@
-// Order detail — where Phases 4, 5, 6 and 7 all meet:
-// - state machine actions (confirm / cancel / return)          Phase 4
-// - courier rate comparison + booking + status sync + label    Phase 5
-// - QR invoice + sandbox payment + settlement                  Phase 6
-// - risk banner + one-click advance payment request            Phase 7
+// Order detail — status actions, courier booking, invoices/payment and risk.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -43,11 +39,11 @@ export default function OrderDetailPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(''); // which action is running
 
-  // Courier booking modal (Phase 5)
+  // Courier booking modal
   const [quotes, setQuotes] = useState<Quote[] | null>(null);
   const [showBooking, setShowBooking] = useState(false);
 
-  // Invoice modal (Phase 6)
+  // Invoice modal
   const [invoice, setInvoice] = useState<OrderDetail['invoices'][0] | null>(null);
 
   const load = useCallback(() => {
@@ -152,7 +148,7 @@ export default function OrderDetailPage() {
 
       {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
 
-      {/* ---------- Phase 7: high-risk banner ---------- */}
+      {/* high-risk banner */}
       {isHighRisk && order.status === 'CONFIRMED' && (
         <Card className="mb-4 border-red-200 bg-red-50/60 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -318,7 +314,7 @@ export default function OrderDetailPage() {
         </form>
       </Card>
 
-      {/* ---------- Phase 5: rate comparison modal ---------- */}
+      {/* rate comparison modal */}
       <Modal title="Compare courier rates" open={showBooking} onClose={() => setShowBooking(false)}>
         {!quotes ? (
           <Loading />
@@ -365,8 +361,8 @@ export default function OrderDetailPage() {
         </div>
       </Modal>
 
-      {/* ---------- Phase 6: QR invoice modal ---------- */}
-      <Modal title="Bangla QR invoice (sandbox)" open={!!invoice} onClose={() => setInvoice(null)}>
+      {/* payment invoice modal */}
+      <Modal title="Payment invoice" open={!!invoice} onClose={() => setInvoice(null)}>
         {invoice && (
           <div className="space-y-4 text-center">
             <p className="text-sm text-slate-500">
@@ -376,12 +372,15 @@ export default function OrderDetailPage() {
             <div className="flex justify-center rounded-2xl border border-slate-200 p-4">
               <QrMock seed={invoice.id} />
             </div>
-            <p className="text-xs text-slate-400">Customer scans with any Bangla QR wallet (bKash, Nagad, bank apps)</p>
+            <p className="break-all rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              Share this pay link with your customer:{' '}
+              <span className="font-mono">{typeof window !== 'undefined' ? window.location.origin : ''}/pay/{invoice.id}</span>
+            </p>
             <Button variant="success" className="w-full" loading={busy === 'pay'} onClick={() => payInvoice(invoice.id)}>
-              Simulate customer payment
+              Mark as paid
             </Button>
             <p className="text-xs text-slate-400">
-              This fires the payment webhook: order marked paid + ledger entry, atomically and exactly once.
+              Use “Mark as paid” to record a payment you’ve already received (e.g. cash), or send the link above for online payment.
             </p>
           </div>
         )}

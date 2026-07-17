@@ -1,5 +1,4 @@
-// Phase 1: Login page — email/password plus "Sign in with Google"
-// (the Google button appears only when NEXT_PUBLIC_GOOGLE_CLIENT_ID is set).
+// Login — email/password (+ Google when configured).
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,8 +11,8 @@ const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('demo@fcomflow.com');
-  const [password, setPassword] = useState('demo1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const googleBtn = useRef<HTMLDivElement>(null);
@@ -79,7 +78,7 @@ export default function LoginPage() {
             Unified inbox · AI order parsing · live inventory · courier booking · Bangla QR payments · COD risk scores.
           </p>
         </div>
-        <p className="text-sm text-indigo-300">Built for SMUCT CSE FEST 2026</p>
+        <p className="text-sm text-indigo-300">Made for Bangladesh’s social-commerce merchants</p>
       </div>
 
       {/* Right: form */}
@@ -114,9 +113,6 @@ export default function LoginPage() {
           <p className="pt-2 text-center text-sm text-slate-500">
             New here?{' '}
             <Link href="/register" className="font-medium text-indigo-600 hover:underline">Create your store</Link>
-          </p>
-          <p className="rounded-lg bg-slate-100 px-3 py-2 text-center text-xs text-slate-500">
-            Demo login: <b>demo@fcomflow.com</b> / <b>demo1234</b> (run the seed first)
           </p>
         </form>
       </div>

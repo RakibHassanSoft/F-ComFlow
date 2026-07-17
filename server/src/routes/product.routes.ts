@@ -1,4 +1,4 @@
-// Phase 4: Product catalog CRUD + low-stock visibility.
+// Product catalog CRUD + low-stock visibility.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

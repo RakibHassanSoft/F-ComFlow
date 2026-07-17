@@ -1,6 +1,4 @@
-// Pure COD-risk rule engine — no database, no network — so it can be unit
-// tested in isolation. riskScorer.ts gathers DB facts, then calls this (or the
-// ML service) to produce the score.
+// Pure COD-risk rule engine (no DB/network) — the fallback scorer.
 import { DISTRICT_RISK, DEFAULT_DISTRICT_RISK, DISTRICTS } from '../data/districts';
 
 export interface RiskResult {

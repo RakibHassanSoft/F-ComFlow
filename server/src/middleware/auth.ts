@@ -1,8 +1,4 @@
-// Phase 1: Authentication middleware.
-// Runs on every protected route: verifies the JWT from the httpOnly cookie,
-// then attaches userId / tenantId / role to the request.
-// EVERY database query after this point is scoped by req.tenantId —
-// that is the tenant-isolation rule from the implementation guide.
+// Auth middleware — verifies the JWT cookie and attaches userId/tenantId/role.
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';

@@ -1,8 +1,4 @@
-// Product image uploads — Cloudinary signed direct-upload.
-//
-// GET /api/uploads/signature -> a short-lived signature the browser uses to
-// POST an image straight to Cloudinary (see client/src/lib/upload.ts). Auth is
-// required so only logged-in merchants can mint upload signatures.
+// Product image uploads — hands out a short-lived Cloudinary upload signature.
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { ApiError } from '../lib/errors';

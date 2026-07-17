@@ -1,6 +1,4 @@
-// Phase 2: Socket.io setup. Every dashboard connects and joins a room named
-// after its tenantId. Events are ONLY broadcast to that room, so Merchant A
-// never receives Merchant B's live updates.
+// Socket.io — each dashboard joins its tenant room; events stay tenant-scoped.
 import { Server } from 'socket.io';
 import http from 'http';
 import jwt from 'jsonwebtoken';

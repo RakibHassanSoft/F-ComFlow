@@ -1,5 +1,4 @@
-// Printable payment receipt — same print-to-PDF pattern as the shipping label.
-// Shows the order, every PAID invoice with its transaction id, and the balance.
+// Printable payment receipt (print → save as PDF).
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';

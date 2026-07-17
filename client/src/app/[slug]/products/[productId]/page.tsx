@@ -1,5 +1,4 @@
-// Public single-product page — fcom.com/<slug>/products/<id>.
-// Shareable deep link for one product, with its photo gallery and a buy box.
+// Public single-product page — gallery + buy box.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';

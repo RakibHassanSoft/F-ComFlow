@@ -1,6 +1,4 @@
-// Shared payment settlement — used by the authed webhook/pay routes AND the
-// public customer pay link. One atomic transaction: invoice + ledger + order
-// move together, and the same transactionId can never settle twice.
+// Payment settlement — one atomic txn (invoice + ledger + order), idempotent.
 import { basePrisma, setTenantGuc } from '../lib/prisma';
 import { ApiError } from '../lib/errors';
 

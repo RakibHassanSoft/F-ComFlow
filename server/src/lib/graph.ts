@@ -1,7 +1,4 @@
-// One shared Meta Graph API client for the whole server.
-// Before this, the base URL + fetch/parse/error-map boilerplate was copied in
-// ads.routes.ts, channel.routes.ts and channels.ts. Keep it in one place so the
-// API version and error handling only ever change here.
+// Shared Meta Graph API client — one place for base URL + error handling.
 import { ApiError } from './errors';
 
 export const GRAPH_VERSION = 'v21.0';

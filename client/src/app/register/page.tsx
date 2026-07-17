@@ -1,4 +1,4 @@
-// Phase 1: Registration — creates a new tenant (store) + its owner account.
+// Register — new store + owner account.
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';

@@ -1,8 +1,4 @@
-// Phase 2: Message simulator.
-// In production this data would arrive via Meta/WhatsApp webhooks
-// (signature-validated, queued in Redis, processed by workers).
-// For the demo, this module generates realistic Banglish customer messages
-// so the whole pipeline can be shown live without Meta credentials.
+// Message simulator — generates fake Banglish chats for demos/testing.
 import { prisma } from '../lib/prisma';
 import { emitToTenant } from '../lib/socket';
 

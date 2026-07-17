@@ -1,4 +1,4 @@
-// Dashboard overview — the numbers a merchant checks first thing in the morning.
+// Dashboard overview — key numbers at a glance.
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -128,8 +128,10 @@ export default function OverviewPage() {
       </Card>
 
       <Card className="mt-6 border-dashed p-6 text-sm text-slate-500">
-        <b className="text-slate-700">Demo tip:</b> open the <Link href="/dashboard/inbox" className="text-indigo-600 hover:underline">Inbox</Link> and
-        press <b>“Simulate incoming message”</b> — then watch the full pipeline: AI parse → confirm (risk score) → book courier → QR payment → ledger.
+        <b className="text-slate-700">Getting started:</b> connect a channel in{' '}
+        <Link href="/dashboard/settings" className="text-indigo-600 hover:underline">Settings</Link>, add products in{' '}
+        <Link href="/dashboard/inventory" className="text-indigo-600 hover:underline">Inventory</Link>, then reply to customer chats in the{' '}
+        <Link href="/dashboard/inbox" className="text-indigo-600 hover:underline">Inbox</Link> — the AI turns each chat into a draft order.
       </Card>
     </div>
   );

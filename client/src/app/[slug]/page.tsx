@@ -1,8 +1,4 @@
-// Public storefront — fcom.com/<slug>  (e.g. fcom.com/k-shop).
-//
-// This is the shareable page a merchant posts on Facebook/Instagram. It is NOT
-// linked anywhere on the main F-ComFlow site — it's reachable only by its link.
-// Customers browse the listed products, build a cart, and order (COD or online).
+// Public storefront at fcom.com/<slug> — link-only shop the merchant shares.
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';

@@ -1,6 +1,4 @@
-// Phase 1: Simple in-memory rate limiter for auth endpoints.
-// (The guide suggests Redis; in-memory keeps the demo dependency-free.
-// Swap the Map for Redis INCR when you scale to multiple servers.)
+// Simple in-memory rate limiter for auth endpoints.
 import { Request, Response, NextFunction } from 'express';
 
 const hits = new Map<string, { count: number; resetAt: number }>();

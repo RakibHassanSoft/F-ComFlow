@@ -1,5 +1,4 @@
-// Settings — profile, channel connections, risk threshold, automation
-// (auto-status + business-hours away reply) and quick-reply templates.
+// Settings — profile, channels, automation, templates, risk threshold.
 'use client';
 import { useEffect, useState } from 'react';
 import { Plug, MessageSquarePlus, Trash2, Clock, Users } from 'lucide-react';

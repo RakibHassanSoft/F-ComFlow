@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00543E"/>
+      <stop offset="0.55" stop-color="#006A4E"/>
+      <stop offset="1" stop-color="#00875F"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F42A41"/>
+      <stop offset="1" stop-color="#c81d33"/>
+    </linearGradient>
+    <linearGradient id="cardArch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f1f7f4"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0a3d2c" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#006A4E"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="1200" fill="#eef2f0"/>
+  <rect x="0" y="0" width="1600" height="1200" fill="none" stroke="#006A4E" stroke-width="10"/>
+
+  <rect x="10" y="10" width="1580" height="188" fill="url(#headerGrad)"/>
+  <rect x="10" y="192" width="1580" height="8" fill="url(#redGrad)"/>
+
+  <g transform="translate(66,104)">
+    <circle r="58" fill="#ffffff" opacity="0.12"/>
+    <circle r="58" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.7"/>
+    <path d="M-30,-22 h44 a10,10 0 0 1 0,20 h-30 M-30,-2 h50 a10,10 0 0 1 0,20 h-56" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="30" cy="26" r="6" fill="#F42A41"/>
+  </g>
+
+  <text x="150" y="86" fill="#ffffff" font-size="76" font-weight="800" letter-spacing="1">F-ComFlow</text>
+  <text x="152" y="132" fill="#d8f5ea" font-size="31" font-weight="600">Social Commerce OS for Bangladesh</text>
+  <text x="152" y="170" fill="#ffd6db" font-size="25" font-style="italic">From Messenger chat to delivered parcel &#8212; one dashboard.</text>
+
+  <g transform="translate(1180,44)">
+    <rect x="0" y="0" width="378" height="118" rx="14" fill="#ffffff" opacity="0.95"/>
+    <text x="24" y="38" fill="#006A4E" font-size="22" font-weight="700">TEAM</text>
+    <text x="24" y="76" fill="#0f172a" font-size="40" font-weight="800">ProCoder</text>
+    <text x="24" y="104" fill="#334155" font-size="22" font-weight="600">Presidency University, Dhaka</text>
+  </g>
+
+  <g transform="translate(34,224)">
+    <rect x="0" y="0" width="490" height="286" rx="16" fill="#ffffff" filter="url(#softShadow)"/>
+    <rect x="0" y="0" width="10" height="286" rx="5" fill="#F42A41"/>
+    <text x="30" y="52" fill="#c81d33" font-size="30" font-weight="800">THE PROBLEM</text>
+    <line x1="30" y1="66" x2="460" y2="66" stroke="#e2e8f0" stroke-width="2"/>
+    <text fill="#1e293b" font-size="22" font-weight="400">
+      <tspan x="30" y="108">Over 60% of Bangladesh's online sales</tspan>
+      <tspan x="30" y="140">happen inside Facebook &amp; Messenger chats,</tspan>
+      <tspan x="30" y="172">not on websites. Sellers juggle:</tspan>
+    </text>
+    <text fill="#334155" font-size="21">
+      <tspan x="46" y="212">&#8226; Orders scattered across DMs &amp; comments</tspan>
+      <tspan x="46" y="244">&#8226; Manual inventory &amp; courier booking</tspan>
+      <tspan x="46" y="276">&#8226; No tracking of COD, returns or profit</tspan>
+    </text>
+  </g>
+
+  <g transform="translate(34,528)">
+    <rect x="0" y="0" width="490" height="290" rx="16" fill="#ffffff" filter="url(#softShadow)"/>
+    <rect x="0" y="0" width="10" height="290" rx="5" fill="#006A4E"/>
+    <text x="30" y="52" fill="#006A4E" font-size="30" font-weight="800">OUR SOLUTION</text>
+    <line x1="30" y1="66" x2="460" y2="66" stroke="#e2e8f0" stroke-width="2"/>
+    <text fill="#1e293b" font-size="22">
+      <tspan x="30" y="108">F-ComFlow is an all-in-one operating</tspan>
+      <tspan x="30" y="140">system for social commerce sellers. It</tspan>
+      <tspan x="30" y="172">captures orders straight from Messenger</tspan>
+      <tspan x="30" y="204">using AI, then manages inventory, courier</tspan>
+      <tspan x="30" y="236">dispatch, payments and analytics &#8212; all</tspan>
+      <tspan x="30" y="268">from a single unified dashboard.</tspan>
+    </text>
+  </g>
+
+  <g transform="translate(34,836)">
+    <rect x="0" y="0" width="490" height="330" rx="16" fill="#ffffff" filter="url(#softShadow)"/>
+    <rect x="0" y="0" width="10" height="330" rx="5" fill="#006A4E"/>
+    <text x="30" y="52" fill="#006A4E" font-size="30" font-weight="800">KEY FEATURES</text>
+    <line x1="30" y1="66" x2="460" y2="66" stroke="#e2e8f0" stroke-width="2"/>
+    <g font-size="21" fill="#1e293b">
+      <circle cx="42" cy="98" r="7" fill="#F42A41"/><text x="62" y="105" font-weight="700">AI Chat-to-Order capture</text>
+      <text x="62" y="132" font-size="19" fill="#475569">Auto-reads DMs &amp; comments into structured orders</text>
+      <circle cx="42" cy="168" r="7" fill="#F42A41"/><text x="62" y="175" font-weight="700">Smart inventory &amp; auto-stock sync</text>
+      <text x="62" y="202" font-size="19" fill="#475569">Live stock counts, low-stock alerts</text>
+      <circle cx="42" cy="238" r="7" fill="#F42A41"/><text x="62" y="245" font-weight="700">One-click courier &amp; COD tracking</text>
+      <text x="62" y="272" font-size="19" fill="#475569">Pathao, Steadfast &amp; RedX integrations</text>
+      <circle cx="42" cy="300" r="7" fill="#F42A41"/><text x="62" y="307" font-weight="700">Profit &amp; return analytics dashboard</text>
+    </g>
+  </g>
+
+  <g transform="translate(544,224)">
+    <rect x="0" y="0" width="520" height="560" rx="16" fill="url(#cardArch)" filter="url(#softShadow)"/>
+    <text x="30" y="52" fill="#006A4E" font-size="30" font-weight="800">SYSTEM ARCHITECTURE</text>
+    <line x1="30" y1="66" x2="490" y2="66" stroke="#cfe3da" stroke-width="2"/>
+    <g font-size="19" text-anchor="middle">
+      <rect x="150" y="90" width="220" height="60" rx="12" fill="#1877F2"/>
+      <text x="260" y="118" fill="#fff" font-weight="700">Facebook &amp; Messenger</text>
+      <text x="260" y="140" fill="#dbeafe" font-size="16">chats &#183; comments &#183; DMs</text>
+      <rect x="150" y="188" width="220" height="60" rx="12" fill="#7c3aed"/>
+      <text x="260" y="215" fill="#fff" font-weight="700">AI Order Extraction</text>
+      <text x="260" y="237" fill="#ede9fe" font-size="16">NLP &#183; Bangla + English</text>
+      <rect x="110" y="286" width="300" height="66" rx="12" fill="#006A4E"/>
+      <text x="260" y="315" fill="#fff" font-weight="800" font-size="22">F-ComFlow Core API</text>
+      <text x="260" y="338" fill="#c9f0e2" font-size="16">Node.js &#183; PostgreSQL &#183; Redis</text>
+      <rect x="20" y="392" width="150" height="58" rx="10" fill="#ffffff" stroke="#006A4E" stroke-width="2.5"/>
+      <text x="95" y="418" fill="#0f172a" font-weight="700">Inventory</text>
+      <text x="95" y="438" fill="#475569" font-size="15">stock engine</text>
+      <rect x="185" y="392" width="150" height="58" rx="10" fill="#ffffff" stroke="#006A4E" stroke-width="2.5"/>
+      <text x="260" y="418" fill="#0f172a" font-weight="700">Courier</text>
+      <text x="260" y="438" fill="#475569" font-size="15">Pathao/RedX API</text>
+      <rect x="350" y="392" width="150" height="58" rx="10" fill="#ffffff" stroke="#006A4E" stroke-width="2.5"/>
+      <text x="425" y="418" fill="#0f172a" font-weight="700">Payments</text>
+      <text x="425" y="438" fill="#475569" font-size="15">bKash/Nagad COD</text>
+      <rect x="150" y="486" width="220" height="56" rx="12" fill="url(#redGrad)"/>
+      <text x="260" y="512" fill="#fff" font-weight="700">Delivered Parcel</text>
+      <text x="260" y="532" fill="#ffe0e4" font-size="15">tracked &#183; reconciled</text>
+    </g>
+    <g stroke="#006A4E" stroke-width="3" fill="none" marker-end="url(#arrow)">
+      <line x1="260" y1="150" x2="260" y2="185"/>
+      <line x1="260" y1="248" x2="260" y2="283"/>
+      <line x1="150" y1="352" x2="105" y2="389"/>
+      <line x1="260" y1="352" x2="260" y2="389"/>
+      <line x1="370" y1="352" x2="415" y2="389"/>
+      <line x1="95" y1="450" x2="215" y2="486"/>
+      <line x1="260" y1="450" x2="260" y2="483"/>
+      <line x1="425" y1="450" x2="305" y2="486"/>
+    </g>
+  </g>
+
+  <g transform="translate(544,800)">
+    <rect x="0" y="0" width="520" height="366" rx="16" fill="#ffffff" filter="url(#softShadow)"/>
+    <text x="30" y="50" fill="#006A4E" font-size="30" font-weight="800">PRODUCT SCREENSHOTS</text>
+    <line x1="30" y1="64" x2="490" y2="64" stroke="#e2e8f0" stroke-width="2"/>
+    <g>
+      <rect x="30" y="84" width="220" height="252" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 6"/>
+      <rect x="42" y="96" width="196" height="26" rx="6" fill="#006A4E" opacity="0.85"/>
+      <rect x="42" y="132" width="196" height="80" rx="6" fill="#dbe7e1"/>
+      <rect x="42" y="222" width="120" height="14" rx="4" fill="#cbd5e1"/>
+      <rect x="42" y="246" width="196" height="14" rx="4" fill="#e2e8f0"/>
+      <rect x="42" y="270" width="160" height="14" rx="4" fill="#e2e8f0"/>
+      <text x="140" y="322" text-anchor="middle" fill="#64748b" font-size="17" font-weight="600">Order Inbox (add image)</text>
+    </g>
+    <g>
+      <rect x="270" y="84" width="220" height="252" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 6"/>
+      <rect x="282" y="96" width="196" height="26" rx="6" fill="#F42A41" opacity="0.8"/>
+      <circle cx="330" cy="180" r="42" fill="none" stroke="#94a3b8" stroke-width="14"/>
+      <circle cx="330" cy="180" r="42" fill="none" stroke="#006A4E" stroke-width="14" stroke-dasharray="150 264" transform="rotate(-90 330 180)"/>
+      <rect x="392" y="150" width="80" height="14" rx="4" fill="#cbd5e1"/>
+      <rect x="392" y="176" width="80" height="14" rx="4" fill="#e2e8f0"/>
+      <rect x="392" y="202" width="60" height="14" rx="4" fill="#e2e8f0"/>
+      <text x="380" y="322" text-anchor="middle" fill="#64748b" font-size="17" font-weight="600">Analytics (add image)</text>
+    </g>
+  </g>
+
+  <g transform="translate(1084,224)">
+    <rect x="0" y="0" width="482" height="300" rx="16" fill="#006A4E" filter="url(#softShadow)"/>
+    <text x="30" y="52" fill="#ffffff" font-size="30" font-weight="800">IMPACT &amp; METRICS</text>
+    <line x1="30" y1="66" x2="452" y2="66" stroke="#ffffff" stroke-opacity="0.3" stroke-width="2"/>
+    <g text-anchor="middle">
+      <text x="130" y="150" fill="#ffffff" font-size="58" font-weight="800">70%</text>
+      <text x="130" y="182" fill="#c9f0e2" font-size="19">less order-entry time</text>
+      <text x="352" y="150" fill="#ffd6db" font-size="58" font-weight="800">3x</text>
+      <text x="352" y="182" fill="#c9f0e2" font-size="19">faster courier dispatch</text>
+      <text x="130" y="248" fill="#ffffff" font-size="58" font-weight="800">1</text>
+      <text x="130" y="280" fill="#c9f0e2" font-size="19">unified dashboard</text>
+      <text x="352" y="248" fill="#ffd6db" font-size="58" font-weight="800">0</text>
+      <text x="352" y="280" fill="#c9f0e2" font-size="19">missed COD reconciles</text>
+    </g>
+  </g>
+
+  <g transform="translate(1084,540)">
+    <rect x="0" y="0" width="482" height="322" rx="16" fill="#ffffff" filter="url(#softShadow)"/>
+    <rect x="0" y="0" width="10" height="322" rx="5" fill="#F42A41"/>
+    <text x="30" y="50" fill="#006A4E" font-size="30" font-weight="800">TECH STACK</text>
+    <line x1="30" y1="64" x2="452" y2="64" stroke="#e2e8f0" stroke-width="2"/>
+    <g font-size="20" fill="#0f172a" font-weight="600">
+      <text x="30" y="100" fill="#c81d33" font-weight="800" font-size="22">Frontend</text>
+      <text x="30" y="130">React &#183; Next.js &#183; Tailwind CSS</text>
+      <text x="30" y="172" fill="#c81d33" font-weight="800" font-size="22">Backend</text>
+      <text x="30" y="202">Node.js &#183; Express &#183; PostgreSQL &#183; Redis</text>
+      <text x="30" y="244" fill="#c81d33" font-weight="800" font-size="22">AI / Integrations</text>
+      <text x="30" y="274" font-size="19">NLP order parser &#183; Messenger Graph API</text>
+      <text x="30" y="302" font-size="19">Pathao / RedX / Steadfast &#183; bKash &#183; Nagad</text>
+    </g>
+  </g>
+
+  <g transform="translate(1084,878)">
+    <rect x="0" y="0" width="482" height="288" rx="16" fill="#0f172a" filter="url(#softShadow)"/>
+    <text x="30" y="50" fill="#ffffff" font-size="28" font-weight="800">TEAM ProCoder</text>
+    <line x1="30" y1="64" x2="452" y2="64" stroke="#334155" stroke-width="2"/>
+    <text x="30" y="102" fill="#cbd5e1" font-size="21">Presidency University, Dhaka</text>
+    <g fill="#e2e8f0" font-size="20">
+      <text x="30" y="146">&#8226; Member 1 &#8212; Team Leader</text>
+      <text x="30" y="180">&#8226; Member 2</text>
+      <text x="30" y="214">&#8226; Member 3</text>
+    </g>
+    <text x="30" y="262" fill="#7dd3b0" font-size="19" font-weight="600">CSE Fest 2026 &#183; Software Project Showcase</text>
+  </g>
+
+  <rect x="10" y="1176" width="1580" height="14" fill="url(#headerGrad)"/>
+</svg>

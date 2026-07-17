@@ -1,5 +1,4 @@
-// Small, dependency-free time helpers (kept neutral so both channels.ts and
-// notifications.ts can use them without a circular import).
+// Small time helpers (dependency-free to avoid circular imports).
 
 export const BD_UTC_OFFSET_HOURS = 6; // Bangladesh is UTC+6 (no DST)
 

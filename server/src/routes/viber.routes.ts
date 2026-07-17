@@ -1,8 +1,4 @@
-// Viber bot integration (public webhook).
-// Connect flow: merchant pastes their Viber bot token (partners.viber.com),
-// we verify it and call set_webhook -> Viber pushes events here.
-// Every event is HMAC-SHA256 signed with the bot token
-// (X-Viber-Content-Signature header) — we verify before processing.
+// Viber bot webhook (public). Events are HMAC-verified with the bot token.
 import { Router } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';

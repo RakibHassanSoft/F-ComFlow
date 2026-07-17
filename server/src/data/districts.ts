@@ -1,6 +1,4 @@
-// Phase 3: The official 64 districts of Bangladesh, plus a normalizer that
-// maps common spelling variants ("Chittagong", "ctg") to the official name.
-// Phase 7 also uses DISTRICT_RISK for regional risk parameters.
+// The 64 districts of Bangladesh + a spelling normalizer and regional risk.
 
 export const DISTRICTS = [
   'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogura',

@@ -1,6 +1,4 @@
-// Phase 4: Orders dashboard — filterable, searchable list with status & risk
-// badges, bulk confirm/cancel, and a manual "New order" form (phone/walk-in
-// orders that never came through a chat).
+// Orders — filter/search list with bulk actions and a manual new-order form.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';

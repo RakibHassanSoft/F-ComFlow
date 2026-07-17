@@ -1,4 +1,4 @@
-// Landing: if a session exists go to the dashboard, otherwise to login.
+// Landing — go to dashboard if logged in, else login.
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';

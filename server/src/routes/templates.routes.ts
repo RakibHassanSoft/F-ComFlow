@@ -1,5 +1,4 @@
-// Quick-reply templates (canned messages). Merchants save common replies and
-// insert them in the inbox with one tap.
+// Quick-reply templates — saved canned replies for the inbox.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

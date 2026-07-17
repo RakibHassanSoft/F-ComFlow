@@ -1,4 +1,4 @@
-// Phase 5: Shipping — every dispatched parcel with live courier status.
+// Shipping — dispatched parcels with live courier status.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';

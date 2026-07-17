@@ -1,6 +1,4 @@
-// Phase 5: Rate comparison, booking (idempotent), and status sync.
-// Quotes and bookings go to the REAL carrier APIs when credentials exist
-// (see services/couriers.ts); otherwise the mocks keep the demo alive.
+// Courier rates, booking (idempotent) and status sync. Real APIs when keys are set.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

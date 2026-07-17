@@ -1,5 +1,4 @@
-// A tiny error class so routes can throw errors with an HTTP status.
-// The global error handler in index.ts turns these into clean JSON responses.
+// Tiny error class carrying an HTTP status; index.ts turns it into JSON.
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {

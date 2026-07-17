@@ -1,5 +1,4 @@
-// Invoices — every payment request across all orders in one list,
-// filterable by status, with totals for what's pending vs collected.
+// Invoices — all payment requests, filterable by status.
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';

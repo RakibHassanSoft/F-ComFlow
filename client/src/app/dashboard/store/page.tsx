@@ -1,9 +1,4 @@
-// Storefront manager — the merchant's "Create store" page.
-//
-// Business model (enforced server-side in server/src/routes/store.routes.ts):
-//   • 500 BDT one-time setup fee (SSLCOMMERZ) unlocks publishing
-//   • 10 BDT once per product you list on the storefront
-//   • no recurring fees; the store is link-only (no public directory)
+// Store manager — create/publish the storefront. 500 setup + 10 per listed product.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Store, Plus, ExternalLink, Copy, Check, Package, CreditCard } from 'lucide-react';
@@ -157,14 +152,15 @@ export default function StorePage() {
             <span className="font-mono">{publicUrl}</span>. Pay the one-time {money(data!.billing.setupFee)} setup fee to publish it.
           </p>
           <div className="flex flex-wrap gap-2">
-            {data!.sslczEnabled && (
+            {data!.sslczEnabled ? (
               <Button onClick={() => pay('SETUP')} loading={busy} variant="success">
                 <CreditCard size={15} /> Pay {money(data!.billing.setupFee)} with SSLCommerz
               </Button>
+            ) : (
+              <Button onClick={() => simulatePay('SETUP')} loading={busy} variant="secondary">
+                Mark as paid (no payment gateway configured)
+              </Button>
             )}
-            <Button onClick={() => simulatePay('SETUP')} loading={busy} variant="secondary">
-              Simulate payment (demo)
-            </Button>
           </div>
         </Card>
       )}
@@ -205,10 +201,11 @@ export default function StorePage() {
                 — {data!.billing.unbilledListings} new product{data!.billing.unbilledListings > 1 ? 's' : ''} at {money(data!.billing.listingFee)} each.
               </p>
               <div className="flex gap-2">
-                {data!.sslczEnabled && (
+                {data!.sslczEnabled ? (
                   <Button variant="success" loading={busy} onClick={() => pay('LISTING')}>Pay {money(data!.billing.listingFeeDue)}</Button>
+                ) : (
+                  <Button variant="secondary" loading={busy} onClick={() => simulatePay('LISTING')}>Mark as paid</Button>
                 )}
-                <Button variant="secondary" loading={busy} onClick={() => simulatePay('LISTING')}>Simulate (demo)</Button>
               </div>
             </Card>
           )}

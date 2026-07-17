@@ -1,5 +1,4 @@
-// Customer profile — lifetime stats, full order history, and every
-// conversation thread with this customer, in one place.
+// Customer profile — stats, order history and chat threads.
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';

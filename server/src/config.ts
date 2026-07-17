@@ -1,4 +1,4 @@
-// Phase 0: All environment config in one place. Values come from .env — never hard-coded.
+// All env config in one place — values come from .env.
 import dotenv from 'dotenv';
 dotenv.config();
 

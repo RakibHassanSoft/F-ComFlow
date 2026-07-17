@@ -1,4 +1,4 @@
-// Phase 4: Inventory — product catalog with live stock and low-stock warnings.
+// Inventory — products, stock and low-stock alerts.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Package, Plus, Pencil, AlertTriangle, RefreshCw } from 'lucide-react';

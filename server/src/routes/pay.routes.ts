@@ -1,6 +1,4 @@
-// PUBLIC customer payment link (no auth) — the advance-fee link a merchant
-// sends a customer in chat opens a page that calls these. Tenant is derived
-// from the invoice itself, so a customer never needs an account.
+// Public pay link (no auth) — tenant derived from the invoice.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../lib/errors';

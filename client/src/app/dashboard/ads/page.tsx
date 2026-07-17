@@ -1,10 +1,4 @@
-// Ads — the feature Meta's own Ads Manager can't do:
-// every conversation that arrived from a click-to-Messenger / click-to-Instagram
-// / click-to-WhatsApp ad is tagged with the ad id, so this page shows
-// AD -> CONVERSATIONS -> ORDERS ->
-// REVENUE from our own database (works in demo mode via the simulator too).
-// Connect the ad account (ads_read/ads_management) and the live campaign
-// list with spend + pause/resume appears as well.
+// Ads — trace which ads turned into real orders, plus live campaign control.
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Megaphone, Facebook, Pause, Play, Unplug, Sparkles, TrendingUp, TrendingDown, Wrench, RefreshCw, Check, Pencil } from 'lucide-react';
@@ -256,7 +250,7 @@ export default function AdsPage() {
         </div>
         {rows.length === 0 ? (
           <EmptyState icon={<Megaphone size={22} />} title="No ad-attributed conversations yet"
-            hint='Simulate a few incoming messages — most carry a demo ad tag. With real channels, click-to-Messenger ads tag chats automatically.' />
+            hint='When customers arrive from a click-to-Messenger, Instagram or WhatsApp ad, every order they place is traced back to that ad right here.' />
         ) : (
           <table className="w-full text-sm">
             <thead>

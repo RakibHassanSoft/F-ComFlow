@@ -1,7 +1,4 @@
-// Phase 1: Registration, login, session refresh, logout.
-// - Passwords hashed with bcrypt (never stored in plain text)
-// - Short-lived access token + long-lived refresh token
-// - Both stored in httpOnly cookies (JavaScript can't steal them)
+// Auth — register, login, refresh, logout. bcrypt + JWT in httpOnly cookies.
 import { Router } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';

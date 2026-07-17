@@ -1,6 +1,4 @@
-// Customer-facing automatic messages: order status updates, product pitches,
-// and the out-of-hours away reply. Pure formatters live here (unit-tested);
-// the send helpers persist a message + push it out through the real channel.
+// Auto customer messages — status updates, product pitches, away replies.
 import { prisma } from '../lib/prisma';
 import { emitToTenant } from '../lib/socket';
 import { sendOutbound, type ChannelType } from './channels';

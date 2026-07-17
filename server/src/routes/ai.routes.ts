@@ -1,5 +1,4 @@
-// Phase 3: AI endpoints — parse a conversation into a draft order.
-// Includes the per-tenant daily quota from the guide (controls API cost).
+// AI endpoints — parse a conversation into a draft order (per-tenant daily quota).
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

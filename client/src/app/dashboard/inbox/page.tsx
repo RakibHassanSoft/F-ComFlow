@@ -1,13 +1,9 @@
-// Phase 2 + 3: Unified Inbox.
-// Left: conversation list (channel, unread badge, last message)
-// Middle: thread view with reply box, quick-replies, send-product, live socket,
-//         plus the "Extract Order with AI" button (Phase 3).
-// Right: customer info panel (past orders, return rate).
+// Unified inbox — chat list, thread + reply, and one-click AI order extraction.
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MessageSquare, Sparkles, Send, UserCheck, Radio, Zap, Package, User } from 'lucide-react';
+import { MessageSquare, Sparkles, Send, UserCheck, Zap, Package, User } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { timeAgo, money } from '@/lib/format';
@@ -40,9 +36,8 @@ export default function InboxPage() {
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState('');
-  const [simulating, setSimulating] = useState(false);
 
-  // AI parse state (Phase 3)
+  // AI parse state
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<Parsed | null>(null);
   const [parseError, setParseError] = useState('');
@@ -137,19 +132,13 @@ export default function InboxPage() {
     await api.post(`/inbox/conversations/${selected.id}/send-product`, { productId });
   }
 
-  // DEMO: stands in for a real Meta/WhatsApp webhook
-  async function simulate() {
-    setSimulating(true);
-    try { await api.post('/inbox/simulate'); } finally { setSimulating(false); }
-  }
-
   async function assignToMe() {
     if (!selected) return;
     const updated = await api.post(`/inbox/conversations/${selected.id}/assign`);
     setSelected({ ...selected, assignedTo: updated.assignedTo });
   }
 
-  // Phase 3: one click -> AI reads the chat -> editable draft order form
+  // One click: AI reads the chat → editable draft order
   async function extractOrder() {
     if (!selected) return;
     setParsing(true);
@@ -189,12 +178,7 @@ export default function InboxPage() {
     <div>
       <PageHeader
         title="Unified Inbox"
-        subtitle="Messenger, Instagram and WhatsApp — one place."
-        action={
-          <Button onClick={simulate} loading={simulating} variant="secondary">
-            <Radio size={15} /> Simulate incoming message
-          </Button>
-        }
+        subtitle="Every channel — Messenger, Instagram, WhatsApp, Telegram, Viber, web chat and email — in one place."
       />
 
       <div className="flex flex-col gap-4 lg:h-[calc(100vh-180px)] lg:flex-row">
@@ -220,7 +204,7 @@ export default function InboxPage() {
             <EmptyState icon={<MessageSquare size={22} />}
               title={conversations.length === 0 ? 'No conversations yet' : 'No chats match'}
               hint={conversations.length === 0
-                ? 'Press "Simulate incoming message" to receive a customer chat.'
+                ? 'Connect a channel in Settings — new customer messages appear here in real time.'
                 : 'Try a different search, or turn off the Unread filter.'} />
           ) : (
             visibleConversations.map((c) => (
@@ -415,7 +399,7 @@ export default function InboxPage() {
         )}
       </Modal>
 
-      {/* ---------- Phase 3: editable draft-order form ---------- */}
+      {/* editable draft-order form */}
       <Modal title="✨ AI-extracted draft order" open={!!parsed} onClose={() => setParsed(null)}>
         {parsed && (
           <div className="space-y-3">

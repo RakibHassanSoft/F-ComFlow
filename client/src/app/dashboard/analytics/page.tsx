@@ -1,5 +1,4 @@
-// Sales analytics — revenue by day, by product and by district, straight from
-// the orders table (cancelled orders excluded). Pure CSS bars, no chart lib.
+// Sales analytics — revenue by day / product / district. CSS bars, no chart lib.
 'use client';
 import { useEffect, useState } from 'react';
 import { BarChart3 } from 'lucide-react';

@@ -1,5 +1,4 @@
-// Phase 2: Unified inbox API.
-// Every query filters by req.tenantId — the tenant-isolation rule.
+// Unified inbox API — everything scoped to the tenant.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

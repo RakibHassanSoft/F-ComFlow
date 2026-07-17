@@ -1,5 +1,4 @@
-// Customer directory — everyone who ever messaged or ordered, with their
-// order history rolled up. Rows link to the full customer profile page.
+// Customer directory — everyone who messaged or ordered.
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';

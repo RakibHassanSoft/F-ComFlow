@@ -1,5 +1,4 @@
-// Pure webhook parsing — no database, no side effects — so it can be unit
-// tested in isolation. channels.ts re-exports normalizeWebhook for callers.
+// Pure webhook parsing (no DB/side effects). Re-exported by channels.ts.
 import type { ChannelType, InboundMessage } from './channels';
 
 // Ad-referral shapes differ per surface — pull whichever fields are present so

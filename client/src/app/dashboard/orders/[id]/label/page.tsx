@@ -1,5 +1,4 @@
-// Phase 5: Printable shipping label. Use the browser's print dialog to
-// save as PDF — print CSS hides everything except the label itself.
+// Printable shipping label (print → save as PDF).
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';

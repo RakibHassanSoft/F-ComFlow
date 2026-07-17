@@ -1,16 +1,5 @@
-// The PUBLIC Meta webhook endpoint — one URL serves Messenger, Instagram
-// AND WhatsApp (you subscribe all three products to it in the Meta app).
-//
-//   GET  /api/meta/webhook   Meta's one-time verification handshake
-//   POST /api/meta/webhook   signed event notifications
-//
-// Security (exactly per Meta's docs):
-//  - GET: echo hub.challenge only if hub.verify_token matches META_VERIFY_TOKEN
-//  - POST: recompute HMAC-SHA256 of the RAW body with META_APP_SECRET and
-//    compare (timing-safe) against the X-Hub-Signature-256 header.
-//    Invalid/missing signature -> 403, event never processed.
-//  - Always answer 200 fast; processing happens after the response so Meta
-//    never retries because we were slow.
+// Public Meta webhook (Messenger/IG/WhatsApp): GET verify handshake, POST
+// HMAC-checked events. Answers 200 fast, then processes.
 import { Router } from 'express';
 import crypto from 'crypto';
 import { normalizeWebhook, ingestInbound } from '../services/channels';

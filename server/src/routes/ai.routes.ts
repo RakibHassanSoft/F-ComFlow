@@ -27,7 +27,7 @@ function checkQuota(tenantId: string) {
 
 // POST /api/ai/parse-order  { conversationId }
 // Returns extracted fields + confidence flags. NEVER crashes on bad input —
-// failure modes return a structured error the UI can show (Phase 3 exit gate).
+// failure modes return a structured error the UI can show.
 router.post('/parse-order', async (req, res, next) => {
   try {
     checkQuota(req.tenantId);

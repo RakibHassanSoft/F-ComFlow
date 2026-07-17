@@ -32,7 +32,7 @@ router.get('/rates', async (req, res, next) => {
 
 // POST /api/couriers/book  { orderId, courier }
 // Idempotency guard: an existing tracking code means double-clicking Book
-// can never create a second consignment (Phase 5 exit gate).
+// can never create a second consignment.
 router.post('/book', async (req, res, next) => {
   try {
     const { orderId, courier } = req.body;

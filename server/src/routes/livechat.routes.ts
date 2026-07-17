@@ -1,14 +1,4 @@
-// Website live-chat widget — a channel that is 100% OURS: no third party,
-// no approval, works instantly.
-//
-// The merchant pastes ONE script tag on their website (shown in Settings):
-//   <script src="https://api.../api/livechat/widget.js" data-tenant="TENANT_ID"></script>
-//
-// The widget talks to these PUBLIC endpoints (CORS open — it runs on the
-// merchant's own domain):
-//   POST /api/livechat/:tenantId/messages   visitor sends a message
-//   GET  /api/livechat/:tenantId/messages   visitor polls for replies
-//   GET  /api/livechat/widget.js            the embeddable script itself
+// Website chat widget — public send/poll endpoints + the embeddable widget.js.
 import { Router } from 'express';
 import cors from 'cors';
 import { prisma } from '../lib/prisma';

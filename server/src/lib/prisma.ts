@@ -1,18 +1,7 @@
-// Prisma client + optional PostgreSQL Row-Level Security (tenant isolation at
-// the database layer — the report's §4.1 / §7.4).
-//
-// RLS_ENABLED=false (default): `prisma` is a plain client and NOTHING here
-// changes behaviour — the app runs exactly as before.
-//
-// RLS_ENABLED=true: every model query is transparently wrapped so it first sets
-// a per-connection tenant GUC (`app.current_tenant`). The policies in
-// prisma/rls.sql then let a query see only rows whose tenantId matches. Requests
-// outside an authenticated user (login, public storefront, webhook routing,
-// seeding) carry no tenant and run under the '*' bypass sentinel.
-//
-// IMPORTANT: interactive $transaction() blocks must use `basePrisma` (the
-// unextended client) and call setTenantGuc() as their first statement — see the
-// four call sites in payments/orders/tracker.
+// Prisma client with optional Postgres Row-Level Security (RLS_ENABLED, off by
+// default). When on, each query sets a per-request tenant GUC so the rls.sql
+// policies scope rows by tenant; interactive $transactions use basePrisma +
+// setTenantGuc (see payments/orders/tracker).
 import { PrismaClient } from '@prisma/client';
 import { AsyncLocalStorage } from 'node:async_hooks';
 

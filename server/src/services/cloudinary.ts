@@ -1,16 +1,5 @@
-// Cloudinary signed uploads for product photos.
-//
-// The browser uploads images DIRECTLY to Cloudinary; our server only hands out
-// a short-lived signature. That means the API secret never leaves the backend
-// and large image files never pass through this Node process.
-//
-// Config comes from ONE env var (exactly what the Cloudinary dashboard gives
-// you — Settings ▸ API keys ▸ "API environment variable"):
-//
-//   CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
-//
-// Env-gated like every other integration: no CLOUDINARY_URL -> uploads are
-// disabled and the UI falls back to pasting an image URL by hand.
+// Cloudinary signed uploads — the server hands out a short-lived signature and
+// the browser uploads directly (secret stays server-side). Set CLOUDINARY_URL.
 import crypto from 'crypto';
 
 interface CloudinaryConfig { cloudName: string; apiKey: string; apiSecret: string; }

@@ -35,7 +35,7 @@ export function findDistrict(text: string): string | null {
   return null;
 }
 
-// Phase 7: rough regional COD-return risk (0 = safest, 1 = riskiest).
+// rough regional COD-return risk (0 = safest, 1 = riskiest).
 export const DISTRICT_RISK: Record<string, number> = {
   Dhaka: 0.1, Chattogram: 0.15, Gazipur: 0.2, Narayanganj: 0.2,
   Khulna: 0.25, Sylhet: 0.3, Rajshahi: 0.25, Barishal: 0.35,

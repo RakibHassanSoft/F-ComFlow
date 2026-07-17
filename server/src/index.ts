@@ -11,15 +11,15 @@ import { startTrackingPoller } from './services/tracker';
 import { isQueueEnabled, startWebhookWorker } from './lib/queue';
 import { normalizeWebhook, ingestInbound } from './services/channels';
 
-import authRoutes from './routes/auth.routes';       // Phase 1
-import inboxRoutes from './routes/inbox.routes';     // Phase 2
-import aiRoutes from './routes/ai.routes';           // Phase 3
-import productRoutes from './routes/product.routes'; // Phase 4
-import orderRoutes from './routes/order.routes';     // Phase 4 + 7
-import courierRoutes from './routes/courier.routes'; // Phase 5
-import paymentRoutes from './routes/payment.routes'; // Phase 6
-import statsRoutes from './routes/stats.routes';     // Dashboard overview
-import webhookRoutes from './routes/webhook.routes'; // Phase 4: external store sync
+import authRoutes from './routes/auth.routes';
+import inboxRoutes from './routes/inbox.routes';
+import aiRoutes from './routes/ai.routes';
+import productRoutes from './routes/product.routes';
+import orderRoutes from './routes/order.routes';
+import courierRoutes from './routes/courier.routes';
+import paymentRoutes from './routes/payment.routes';
+import statsRoutes from './routes/stats.routes';
+import webhookRoutes from './routes/webhook.routes'; // external store sync
 import metaRoutes from './routes/meta.routes';       // REAL Meta/WhatsApp webhooks
 import channelRoutes from './routes/channel.routes'; // Channel connections (Settings)
 import telegramRoutes from './routes/telegram.routes'; // Telegram bot webhook
@@ -48,7 +48,7 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// Phase 0 exit gate: health-check endpoint
+// health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'fcomflow-api' }));
 
 app.use('/api/auth', authRoutes);

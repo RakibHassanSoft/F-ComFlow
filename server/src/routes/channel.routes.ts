@@ -1,13 +1,4 @@
-// Channel connections — merchants connect their real social accounts.
-//
-// TWO ways to connect (both end in the same ChannelConnection row):
-//  1. ONE-CLICK OAUTH (the friendly way):
-//     - Facebook/Instagram: the client opens the Facebook Login popup, the
-//       merchant picks their Page, we exchange tokens server-side, save the
-//       connection AND auto-subscribe the Page to our webhook.
-//     - WhatsApp: Meta's "Embedded Signup" popup returns a code + the new
-//       phone_number_id; we exchange the code for a token and save.
-//  2. MANUAL (advanced/dev): paste an ID + token directly.
+// Channel connections — one-click OAuth (Facebook/IG/WhatsApp) or manual token.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

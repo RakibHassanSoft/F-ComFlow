@@ -1,16 +1,5 @@
-// Phase 5: Courier adapters — REAL Pathao & RedX integrations, env-gated.
-//
-// How the modes work (per courier, independently):
-//   - Credentials present in server/.env  -> REAL API calls (sandbox or prod,
-//     depending on the base URL you configure)
-//   - No credentials                       -> the mock keeps working, so the
-//     demo never breaks
-//
-// One contract, three implementations — a 4th carrier stays a plug-in.
-// Tracking flows into the site three ways, all ending in the same update:
-//   1. Pathao webhook (instant push)        -> webhook.routes.ts
-//   2. Background poller every few minutes  -> services/tracker.ts
-//   3. Manual "Sync status" button          -> courier.routes.ts
+// Courier adapters (Pathao/RedX/Steadfast/Paperfly), env-gated: keys -> real
+// API, none -> mock. Tracking arrives via webhook, poller, or manual sync.
 
 export interface Quote {
   courier: string;

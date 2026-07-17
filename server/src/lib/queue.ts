@@ -1,13 +1,6 @@
-// Durable webhook ingestion queue (Redis) — the report's §4.2 / §7.1 pipeline.
-//
-// Env-gated: set REDIS_URL to turn it on. When ON, inbound Meta/WhatsApp
-// webhooks are acknowledged with 200 instantly and their raw payloads are
-// LPUSH'd onto a Redis list (a durable task queue). A background worker then
-// BRPOPs and processes them, so a burst of flash-sale traffic can't overwhelm
-// the request path, and a crash mid-processing never loses an event.
-//
-// No REDIS_URL -> the queue is disabled and webhooks are processed inline,
-// exactly as before. Nothing else in the app changes.
+// Optional durable webhook queue (Redis). Set REDIS_URL to buffer inbound
+// webhooks on a Redis list and drain them in a background worker; blank =
+// process inline. Nothing else changes.
 // ioredis is loaded LAZILY (require inside the functions) so the server runs
 // WITHOUT the package installed when the queue is off (REDIS_URL blank).
 // Install it only when you actually enable the queue:  npm install ioredis

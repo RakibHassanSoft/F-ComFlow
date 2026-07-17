@@ -1,14 +1,4 @@
-// Ads — two features, one page:
-//
-// 1. AD → ORDER ATTRIBUTION (works with ZERO Meta permissions):
-//    click-to-Messenger/WhatsApp ads tag incoming chats with the ad id
-//    (captured by our webhook). We join that against conversations and
-//    orders in OUR OWN database — something Meta's Ads Manager can't show:
-//    "this ad produced N conversations, M orders, ৳X revenue, Y% high-risk".
-//
-// 2. LIVE CAMPAIGNS (Meta Marketing API, needs ads_read / ads_management):
-//    the merchant connects their ad account once; we list campaigns with
-//    spend/impressions/clicks and allow pause/resume from the dashboard.
+// Ads — order attribution (from our own DB) + live Meta campaign control.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

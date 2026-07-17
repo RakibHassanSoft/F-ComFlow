@@ -25,7 +25,7 @@ export async function applyTrackingUpdate(orderId: string, newStatus: string) {
 
   const updated = await basePrisma.$transaction(async (tx: any) => {
     await setTenantGuc(tx, order.tenantId); // RLS: scope this transaction to the order's tenant
-    // A returned parcel puts every line's units back in stock (same rule as Phase 4)
+    // A returned parcel puts every line's units back in stock
     if (returned) {
       for (const item of order.items) {
         await tx.product.updateMany({

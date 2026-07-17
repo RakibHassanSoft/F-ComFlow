@@ -1,13 +1,5 @@
-// Public storefront ("fcom.com/<slug>").
-//
-// Business model (as specified):
-//   - 500 BDT one-time store setup fee, paid via SSLCOMMERZ
-//   - 10 BDT per listed product, no recurring fees
-//   - the store is link-only marketing: no public directory anywhere
-//
-// TWO routers live here:
-//   storeRouter  (authed,  /api/store)  — the merchant manages their store
-//   shopRouter   (public,  /api/shop)   — customers browse + order + fee callbacks
+// Storefront — storeRouter (authed) manages the store, shopRouter (public)
+// serves fcom.com/<slug>. 500 setup + 10 per listed product, link-only.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';

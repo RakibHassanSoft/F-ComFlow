@@ -1,11 +1,5 @@
-// Automated ad-performance analysis + recommendations.
-//
-// The unique angle (same as the attribution table): we know each campaign's
-// Meta spend AND the orders/revenue its ads actually produced in OUR inbox. So
-// we can judge campaigns on real ROI, not just clicks, and suggest a concrete,
-// one-click action for each: SCALE (raise budget), PAUSE, TRIM (lower budget),
-// or FIX (creative issue). Nothing is applied automatically — the merchant
-// clicks Apply, which calls the pause/budget endpoints.
+// Ad analysis — judges each campaign on real ROI (Meta spend vs orders we
+// attributed) and suggests scale/pause/trim/fix. Applied only on click.
 import { graph } from "../lib/graph";
 
 export interface AttributionAgg {

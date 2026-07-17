@@ -72,7 +72,7 @@ router.post('/login', rateLimit(5, 60_000), async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    console.log(`[audit] login: ${user.email} (tenant ${user.tenantId})`); // Phase 1: audit logging
+    console.log(`[audit] login: ${user.email} (tenant ${user.tenantId})`); // audit log
     const token = setAuthCookies(res, { userId: user.id, tenantId: user.tenantId, role: user.role });
     res.json({
       user: { id: user.id, name: user.name, email: user.email, role: user.role },

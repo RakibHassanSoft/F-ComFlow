@@ -1,11 +1,5 @@
-// Phase 3: AI Order Parser.
-//
-// Two engines, one function:
-//   1. FastAPI AI service (ai/ folder) — used when AI_SERVICE_URL is set.
-//      That service uses real Gemini if it has a GEMINI_API_KEY, otherwise
-//      its own rule-based NLP. Either way it returns this exact shape.
-//   2. Built-in TypeScript rules — always available; automatic fallback if
-//      the AI service is down, so parsing NEVER hard-fails (Phase 3 gate).
+// AI order parser — calls the FastAPI service (Gemini) when AI_SERVICE_URL is
+// set, else a built-in rule engine. Always returns the same shape.
 import { prisma } from '../lib/prisma';
 import { findDistrict } from '../data/districts';
 import { config } from '../config';

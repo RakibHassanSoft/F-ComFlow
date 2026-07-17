@@ -81,7 +81,7 @@ export async function simulateIncomingConversation(tenantId: string) {
     const message = await prisma.message.create({
       data: { tenantId, conversationId: conversation.id, direction: 'INBOUND', text },
     });
-    // Phase 2 exit gate: message appears live on the dashboard — no refresh
+    // message appears live on the dashboard
     emitToTenant(tenantId, 'message:new', { conversationId: conversation.id, message });
   }
 

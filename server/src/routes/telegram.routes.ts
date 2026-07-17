@@ -1,12 +1,4 @@
-// Telegram Bot API integration — the friendliest channel of all:
-// no App Review, no business verification, completely free.
-//
-// Connect flow (see channel.routes.ts POST /connect/telegram):
-//   merchant pastes the token from @BotFather -> we verify it with getMe ->
-//   we call setWebhook so Telegram pushes updates to
-//   {PUBLIC_API_URL}/api/telegram/webhook/{botId}  with a secret header.
-//
-// This file is the PUBLIC webhook that receives those updates.
+// Telegram webhook — receives bot updates (connect flow is in channel.routes.ts).
 import { Router } from 'express';
 import { ingestInbound } from '../services/channels';
 

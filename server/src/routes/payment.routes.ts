@@ -1,10 +1,5 @@
-// Phase 6: Payments, Bangla QR & the settlement ledger.
-// Financial code gets the strictest correctness bar:
-//  - amounts handled as exact 2-decimal values, never floating garbage
-//  - the settlement is ONE atomic transaction (order + ledger together)
-//  - the webhook is idempotent: the same transactionId can never settle twice
-// The payment provider is a mock of the SSLCOMMERZ sandbox; the webhook
-// endpoint has the same shape a real IPN handler would.
+// Payments + settlement ledger — exact 2-decimal money, one atomic idempotent
+// settlement (order + ledger together).
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requireOwner } from '../middleware/auth';
@@ -16,7 +11,7 @@ const router = Router();
 router.use(requireAuth);
 
 // POST /api/payments/invoices  { orderId, type: "FULL" | "ADVANCE" }
-// ADVANCE = 20% booking fee for high-risk COD orders (Phase 7 uses this).
+// ADVANCE = 20% booking fee for high-risk COD orders.
 router.post('/invoices', async (req, res, next) => {
   try {
     const { orderId, type } = req.body;

@@ -83,7 +83,7 @@ router.patch('/:id', async (req, res, next) => {
         price: price != null ? Number(price) : existing.price,
         stockQuantity: newStock,
         reorderThreshold: reorderThreshold != null ? Number(reorderThreshold) : existing.reorderThreshold,
-        // Restocking above the threshold re-arms the low-stock alert (Phase 4 exit gate)
+        // Restocking above the threshold re-arms the low-stock alert
         lowStockAlerted: newStock > (reorderThreshold ?? existing.reorderThreshold) ? false : existing.lowStockAlerted,
       },
     });

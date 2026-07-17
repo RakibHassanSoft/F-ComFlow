@@ -1,13 +1,6 @@
-// Phase 4: Order lifecycle — the transactional heart of F-ComFlow.
-// Phase 7 hooks in here too: every confirmation gets a COD risk score.
-//
-// Orders hold MULTIPLE line items (OrderItem). Stock is reserved atomically
-// per item inside one transaction — if any line lacks stock, the whole
-// confirmation rolls back and nothing is reserved.
-//
-// State machine:  DRAFT -> CONFIRMED -> DISPATCHED -> DELIVERED
-//                     \-> CANCELLED       \-> RETURNED
-// Illegal jumps (e.g. DRAFT -> DELIVERED) are rejected with 4xx.
+// Order lifecycle — atomic per-item stock reservation, a state machine
+// (DRAFT→CONFIRMED→DISPATCHED→DELIVERED, or CANCELLED/RETURNED), and a COD
+// risk score on confirm.
 import { Router } from 'express';
 import { prisma, basePrisma, setTenantGuc } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';
@@ -143,7 +136,7 @@ router.post('/', async (req, res, next) => {
       .map((i) => ({ productId: String(i.productId || ''), quantity: Math.floor(Number(i.quantity) || 1) }))
       .filter((i) => i.productId);
 
-    // Phase 3 exit gate: invalid values are impossible to save
+    // invalid values are impossible to save
     if (!customerName || !address || !district) {
       throw new ApiError(400, 'customerName, address and district are required');
     }
@@ -204,7 +197,7 @@ router.post('/:id/confirm', async (req, res, next) => {
     const order = await getOwnOrder(req.tenantId, req.params.id);
     assertTransition(order.status, 'CONFIRMED');
 
-    // Phase 7: score the order BEFORE dispatch (graceful: never blocks on failure)
+    // score the order BEFORE dispatch (never blocks on failure)
     let risk = null;
     try {
       risk = await scoreOrder(req.tenantId, order);
@@ -249,7 +242,7 @@ router.post('/:id/confirm', async (req, res, next) => {
       });
     });
 
-    // Phase 4: low-stock alert — exactly one per threshold crossing, per product
+    // low-stock alert — exactly one per threshold crossing, per product
     const fresh = await prisma.product.findMany({
       where: { id: { in: order.items.map((i: any) => i.productId) }, tenantId: req.tenantId },
     });

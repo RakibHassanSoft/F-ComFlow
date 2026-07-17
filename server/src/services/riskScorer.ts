@@ -1,10 +1,5 @@
-// Phase 7: COD Risk Predictor.
-//
-// The Node API gathers the raw facts (it owns the database), then:
-//   1. If AI_SERVICE_URL is set -> the FastAPI service scores them with the
-//      trained ML model (ai/models/risk_model_v1.joblib).
-//   2. Otherwise, or if the service is down -> a transparent weighted-rule
-//      score (see risk-rules.ts), so confirmation is NEVER blocked by an outage.
+// COD risk predictor — scores via the FastAPI ML model when AI_SERVICE_URL is
+// set, else a rule-based fallback (risk-rules.ts) so confirmation never blocks.
 import { prisma } from '../lib/prisma';
 import { config } from '../config';
 import { scoreLocally, type RawFacts, type RiskResult } from './risk-rules';

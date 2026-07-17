@@ -1,15 +1,5 @@
-// REAL social media integration (Messenger, Instagram, WhatsApp Cloud API).
-//
-// INBOUND:  Meta POSTs webhook events -> meta.routes.ts verifies the HMAC
-//           signature -> this module normalizes the three payload shapes into
-//           one internal message and routes it to the right tenant (via the
-//           ChannelConnection whose externalId matches the event).
-// OUTBOUND: when a merchant replies in the inbox, this module sends the text
-//           back out through the Graph API / WhatsApp Cloud API.
-//
-// Endpoints used (Graph API v21.0):
-//   Messenger/Instagram send:  POST /v21.0/me/messages?access_token=PAGE_TOKEN
-//   WhatsApp send:             POST /v21.0/{phone_number_id}/messages  (Bearer token)
+// Real Messenger/Instagram/WhatsApp integration. Inbound: normalize + route
+// Meta webhooks to the right tenant. Outbound: send replies via Graph v21.0.
 import { prisma } from '../lib/prisma';
 import { emitToTenant } from '../lib/socket';
 import { GRAPH } from '../lib/graph';

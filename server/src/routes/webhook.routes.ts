@@ -1,16 +1,5 @@
-// Phase 4 (report feature #4): Omnichannel inventory sync with external
-// stores (Shopify / WooCommerce style).
-//
-// INBOUND:  the external store calls us when it sells something ->
-//           central stock is decremented atomically (same one-statement
-//           conditional update that prevents double-selling everywhere else).
-// OUTBOUND: whenever OUR stock changes, connected stores should be told.
-//           Real Shopify/Woo calls go where the `console.log` is — the event
-//           is recorded so the sync is visible in the demo.
-//
-// NOTE: this route is called by machines, not logged-in users, so it is NOT
-// behind requireAuth. It is protected by an optional shared token
-// (STORE_WEBHOOK_TOKEN in .env) — exactly how Shopify webhook secrets work.
+// Machine webhooks (no login): external store stock sync (Shopify/Woo) and
+// courier status pushes. Protected by an optional shared token.
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { ApiError } from '../lib/errors';

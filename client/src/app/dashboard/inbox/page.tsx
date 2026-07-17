@@ -134,8 +134,14 @@ export default function InboxPage() {
 
   async function assignToMe() {
     if (!selected) return;
-    const updated = await api.post(`/inbox/conversations/${selected.id}/assign`);
-    setSelected({ ...selected, assignedTo: updated.assignedTo });
+    setParseError('');
+    try {
+      const updated = await api.post(`/inbox/conversations/${selected.id}/assign`, {});
+      setSelected({ ...selected, assignedTo: updated.assignedTo });
+      loadConversations();
+    } catch (err: any) {
+      setParseError(err.message || 'Could not claim this conversation');
+    }
   }
 
   // One click: AI reads the chat → editable draft order

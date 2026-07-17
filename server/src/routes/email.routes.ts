@@ -1,13 +1,4 @@
-// Email channel — inbound webhook (public).
-//
-// How inbound email reaches us: email providers with "inbound parse"
-// (Mailgun Routes, SendGrid Inbound Parse, CloudMailin, Postmark) accept
-// mail for your support address and POST it as JSON to a URL. Point them at:
-//   POST /api/email/inbound
-// with header  x-email-token: EMAIL_WEBHOOK_TOKEN   (from server/.env)
-//
-// Body (normalized): { to, from, fromName?, subject?, text }
-// Outbound replies go through SMTP (see channels.ts sendOutbound EMAIL case).
+// Email channel — inbound-parse webhook at POST /api/email/inbound (x-email-token).
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { ingestInbound } from '../services/channels';

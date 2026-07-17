@@ -1,15 +1,5 @@
-// bKash Tokenized Checkout (sandbox by default) — env-gated, exactly like the
-// courier adapters: credentials present -> real bKash checkout; absent -> the
-// existing mock "Simulate payment" flow stays the only path, nothing breaks.
-//
-//   BKASH_BASE_URL    (default: bKash's public sandbox)
-//   BKASH_APP_KEY / BKASH_APP_SECRET / BKASH_USERNAME / BKASH_PASSWORD
-//
-// Flow (per bKash's Tokenized Checkout docs):
-//   1. grant token   POST /tokenized/checkout/token/grant
-//   2. create        POST /tokenized/checkout/create   -> bkashURL (customer pays there)
-//   3. bKash redirects to our callback with paymentID&status
-//   4. execute       POST /tokenized/checkout/execute  -> trxID = settlement proof
+// bKash Tokenized Checkout (env-gated). Keys set -> real checkout (grant →
+// create → execute); absent -> the mock pay flow. Sandbox base by default.
 import { config } from '../config';
 
 const DEFAULT_BASE = 'https://tokenized.sandbox.bka.sh/v1.2.0-beta';
